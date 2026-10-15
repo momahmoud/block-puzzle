@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'palette.dart';
 import 'theme.dart';
 
 /// Chunky game text: a gradient fill with a dark outline.
@@ -61,47 +60,38 @@ class OutlinedText extends StatelessWidget {
   }
 }
 
-/// A small gold crown, used next to the best score.
+/// One of the game's illustrated icons from assets/icons. These are 64px
+/// images, so keep them at about 32 points or smaller.
+class GameIcon extends StatelessWidget {
+  const GameIcon(this.name, {super.key, this.size = 28, this.flip = false});
+
+  final String name;
+  final double size;
+
+  /// Mirror left to right (undo uses the replay arrow this way).
+  final bool flip;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = Image.asset(
+      'assets/icons/$name.png',
+      width: size,
+      height: size,
+      filterQuality: FilterQuality.medium,
+      excludeFromSemantics: true,
+    );
+    return flip ? Transform.flip(flipX: true, child: image) : image;
+  }
+}
+
+/// The gold crown shown next to best scores.
 class CrownIcon extends StatelessWidget {
   const CrownIcon({super.key, this.size = 24});
 
   final double size;
 
   @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: Size(size, size * 0.8), painter: _CrownPainter());
-}
-
-class _CrownPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final path = Path()
-      ..moveTo(w * 0.08, h * 0.88)
-      ..lineTo(0, h * 0.25)
-      ..lineTo(w * 0.3, h * 0.5)
-      ..lineTo(w * 0.5, h * 0.05)
-      ..lineTo(w * 0.7, h * 0.5)
-      ..lineTo(w, h * 0.25)
-      ..lineTo(w * 0.92, h * 0.88)
-      ..close();
-    canvas.drawPath(path, Paint()..color = const Color(0xFFE0A21C));
-    canvas.drawPath(
-      path.shift(Offset(0, -h * 0.06)),
-      Paint()..color = kGold,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.08, h * 0.8, w * 0.84, h * 0.16),
-        Radius.circular(h * 0.05),
-      ),
-      Paint()..color = const Color(0xFFE0A21C),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) => GameIcon('crown', size: size * 1.15);
 }
 
 /// A big rounded button with a darker lip, matching the blocks.
@@ -115,7 +105,11 @@ class ChunkyButton extends StatelessWidget {
     this.subtitle,
     this.fontSize = 22,
     this.expand = false,
+    this.leading,
   });
+
+  /// Shown before the label instead of [icon], e.g. a [GameIcon].
+  final Widget? leading;
 
   final String label;
   final VoidCallback onPressed;
@@ -150,7 +144,10 @@ class ChunkyButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[
+              if (leading != null) ...[
+                leading!,
+                const SizedBox(width: 8),
+              ] else if (icon != null) ...[
                 Icon(icon, color: Colors.white, size: fontSize * 1.2),
                 const SizedBox(width: 8),
               ],
@@ -336,9 +333,13 @@ class StatPill extends StatelessWidget {
       required this.icon,
       required this.label,
       required this.value,
-      this.color});
+      this.color,
+      this.leading});
 
   final IconData icon;
+
+  /// Shown instead of [icon], e.g. a [GameIcon].
+  final Widget? leading;
   final String label;
   final String value;
   final Color? color;
@@ -354,7 +355,7 @@ class StatPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: color ?? Colors.white70),
+          leading ?? Icon(icon, size: 18, color: color ?? Colors.white70),
           const SizedBox(width: 6),
           Text(label,
               style: const TextStyle(

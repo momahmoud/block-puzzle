@@ -157,7 +157,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         tooltip: 'Themes',
                         iconSize: 28,
                         color: Colors.white,
-                        icon: const Icon(Icons.palette_rounded),
+                        icon: ShaderMask(
+                          blendMode: BlendMode.srcIn,
+                          shaderCallback: (bounds) => const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFFFD25A),
+                              Color(0xFFFF7A45),
+                              Color(0xFFE5487A)
+                            ],
+                          ).createShader(bounds),
+                          child: const Icon(Icons.palette_rounded, size: 32),
+                        ),
                         onPressed: () {
                           widget.sfx.tap();
                           showThemePicker(context,
@@ -169,14 +181,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           tooltip: 'Leaderboard',
                           iconSize: 28,
                           color: Colors.white,
-                          icon: const Icon(Icons.leaderboard_rounded),
+                          icon: const GameIcon('leaderboard', size: 32),
                           onPressed: widget.app.games.showLeaderboards,
                         ),
                         IconButton(
                           tooltip: 'Awards',
                           iconSize: 28,
                           color: Colors.white,
-                          icon: const Icon(Icons.emoji_events_rounded),
+                          icon: const GameIcon('trophy', size: 32),
                           onPressed: widget.app.games.showAchievements,
                         ),
                       ],
@@ -185,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         tooltip: 'Settings',
                         iconSize: 28,
                         color: Colors.white,
-                        icon: const Icon(Icons.settings_rounded),
+                        icon: const GameIcon('settings', size: 32),
                         onPressed: () {
                           widget.sfx.tap();
                           showSettingsSheet(context, app: widget.app);
@@ -224,7 +236,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   _enter(
                     2,
                     _ModeButton(
-                      icon: Icons.all_inclusive_rounded,
+                      icon: const Icon(Icons.all_inclusive_rounded,
+                          color: Colors.white, size: 28),
                       title: 'Classic',
                       subtitle: progress
                           ? 'Continue · Score ${_game.score}'
@@ -258,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             child: ListenableBuilder(
                               listenable: widget.levels,
                               builder: (context, _) => _ModeTile(
-                                icon: Icons.flag_rounded,
+                                icon: const GameIcon('map', size: 36),
                                 title: 'Levels',
                                 subtitle: widget.levels.allDone
                                     ? '★ ${widget.levels.totalStars}'
@@ -275,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               builder: (context, _) {
                                 final daily = widget.app.daily;
                                 return _ModeTile(
-                                  icon: Icons.calendar_today_rounded,
+                                  icon: const GameIcon('calendar', size: 36),
                                   title: 'Daily',
                                   subtitle: daily.doneToday
                                       ? 'Done ✓'
@@ -371,7 +384,7 @@ class _ModeButton extends StatelessWidget {
     required this.onPressed,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String title;
   final String subtitle;
   final Color color;
@@ -407,7 +420,7 @@ class _ModeButton extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.22),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, color: Colors.white, size: 28),
+                  child: Center(child: icon),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -437,8 +450,7 @@ class _ModeButton extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(Icons.play_arrow_rounded,
-                    color: Colors.white, size: 32),
+                const GameIcon('play', size: 36),
               ],
             ),
           ),
@@ -469,7 +481,7 @@ class _ModeTile extends StatelessWidget {
     this.dot = false,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String title;
   final String subtitle;
   final Color color;
@@ -508,7 +520,7 @@ class _ModeTile extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    Icon(icon, color: Colors.white, size: 28),
+                    icon,
                     const SizedBox(height: 4),
                     Text(
                       title,

@@ -31,6 +31,7 @@ flutter:
     enable-swift-package-manager: false
   assets:
     - assets/sounds/
+    - assets/icons/
   fonts:
     # Fredoka, SIL Open Font License (assets/fonts/OFL.txt).
     - family: Fredoka

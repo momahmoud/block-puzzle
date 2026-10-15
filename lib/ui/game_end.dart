@@ -53,11 +53,11 @@ extension _EndViews on _GameScreenState {
     );
   }
 
-  Widget _secondaryButton(
-          String label, IconData icon, VoidCallback onPressed) =>
+  Widget _secondaryButton(String label, String icon, VoidCallback onPressed,
+          {bool flip = false}) =>
       ChunkyButton(
         label: label,
-        icon: icon,
+        leading: GameIcon(icon, size: 24, flip: flip),
         fontSize: 17,
         expand: true,
         color: Color.lerp(GameTheme.of(context).sheet, Colors.white, 0.2),
@@ -98,11 +98,10 @@ extension _EndViews on _GameScreenState {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      moves ? Icons.more_time_rounded : Icons.favorite_rounded,
-                      size: 38,
-                      color: moves ? Colors.white : const Color(0xFFFF5A7A),
-                    ),
+                    moves
+                        ? const Icon(Icons.more_time_rounded,
+                            size: 38, color: Colors.white)
+                        : const GameIcon('heart', size: 40),
                     Semantics(
                       label: '$left seconds left',
                       excludeSemantics: true,
@@ -118,7 +117,7 @@ extension _EndViews on _GameScreenState {
             ChunkyButton(
               label: moves ? '+${GameController.extraMoves} Moves' : 'Revive',
               subtitle: adReady ? 'Watch an ad' : 'Ad loading…',
-              icon: Icons.ondemand_video_rounded,
+              leading: const GameIcon('watch_ad', size: 34),
               color: const Color(0xFFFF8A00),
               expand: true,
               onPressed: adReady && !_watchingAd
@@ -129,11 +128,12 @@ extension _EndViews on _GameScreenState {
             const SizedBox(height: 10),
             withAd
                 ? _secondaryButton(
-                    'Undo  ($undos left)', Icons.undo_rounded, _undoFromResults)
+                    'Undo  (\$undos left)', 'replay', _undoFromResults,
+                    flip: true)
                 : ChunkyButton(
                     label: 'Undo last move',
-                    subtitle: '$undos left',
-                    icon: Icons.undo_rounded,
+                    subtitle: '\$undos left',
+                    leading: const GameIcon('replay', size: 30, flip: true),
                     expand: true,
                     onPressed: _undoFromResults,
                   ),
@@ -235,7 +235,7 @@ extension _EndViews on _GameScreenState {
           const SizedBox(height: 22),
           ChunkyButton(
             label: 'Play Again',
-            icon: Icons.replay_rounded,
+            leading: const GameIcon('replay', size: 30),
             expand: true,
             onPressed: () {
               _sfx.tap();
@@ -243,7 +243,7 @@ extension _EndViews on _GameScreenState {
             },
           ),
           const SizedBox(height: 10),
-          _secondaryButton('Home', Icons.home_rounded, _goHome),
+          _secondaryButton('Home', 'home', _goHome),
         ],
       ),
     );
@@ -293,7 +293,7 @@ extension _EndViews on _GameScreenState {
             const SizedBox(height: 22),
             ChunkyButton(
               label: 'Try Again',
-              icon: Icons.replay_rounded,
+              leading: const GameIcon('replay', size: 30),
               expand: true,
               onPressed: () {
                 _sfx.tap();
@@ -301,10 +301,8 @@ extension _EndViews on _GameScreenState {
               },
             ),
             const SizedBox(height: 10),
-            _secondaryButton(
-                level.isDaily ? 'Home' : 'Levels',
-                level.isDaily ? Icons.home_rounded : Icons.map_rounded,
-                _goHome),
+            _secondaryButton(level.isDaily ? 'Home' : 'Levels',
+                level.isDaily ? 'home' : 'map', _goHome),
           ],
         ),
       );
@@ -355,6 +353,7 @@ extension _EndViews on _GameScreenState {
               const SizedBox(height: 10),
               StatPill(
                 icon: Icons.card_giftcard_rounded,
+                leading: const GameIcon('gift', size: 22),
                 label: 'Reward',
                 value: '+1 ${boosterName(_dailyReward!)}',
                 color: theme.accent,
@@ -369,6 +368,7 @@ extension _EndViews on _GameScreenState {
             children: [
               StatPill(
                   icon: Icons.star_rounded,
+                  leading: const GameIcon('star', size: 20),
                   label: 'Score',
                   value: '${_game.score}',
                   color: kGold),
@@ -390,21 +390,19 @@ extension _EndViews on _GameScreenState {
             Row(
               children: [
                 Expanded(
-                  child: _secondaryButton('Replay', Icons.replay_rounded, () {
+                  child: _secondaryButton('Replay', 'replay', () {
                     _sfx.tap();
                     _restart();
                   }),
                 ),
                 const SizedBox(width: 10),
-                Expanded(
-                    child:
-                        _secondaryButton('Levels', Icons.map_rounded, _goHome)),
+                Expanded(child: _secondaryButton('Levels', 'map', _goHome)),
               ],
             ),
           ] else ...[
             ChunkyButton(
               label: 'Play Again',
-              icon: Icons.replay_rounded,
+              leading: const GameIcon('replay', size: 30),
               expand: true,
               onPressed: () {
                 _sfx.tap();
@@ -412,10 +410,8 @@ extension _EndViews on _GameScreenState {
               },
             ),
             const SizedBox(height: 10),
-            _secondaryButton(
-                level.isDaily ? 'Home' : 'Levels',
-                level.isDaily ? Icons.home_rounded : Icons.map_rounded,
-                _goHome),
+            _secondaryButton(level.isDaily ? 'Home' : 'Levels',
+                level.isDaily ? 'home' : 'map', _goHome),
           ],
         ],
       ),

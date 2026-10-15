@@ -59,7 +59,7 @@ class GoalIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => switch (type) {
-        GoalType.score => Icon(Icons.star_rounded, color: kGold, size: size),
+        GoalType.score => GameIcon('star', size: size),
         GoalType.lines => Icon(Icons.view_week_rounded,
             color: const Color(0xFF8FE3FF), size: size),
         GoalType.gems => SizedBox(
@@ -200,7 +200,7 @@ class _LevelMapScreenState extends State<LevelMapScreen>
             ),
             child: Row(
               children: [
-                const Icon(Icons.star_rounded, color: kGold, size: 22),
+                const GameIcon('star', size: 24),
                 const SizedBox(width: 4),
                 Text(
                   '${levels.totalStars}/${LevelSpec.count * 3}',
@@ -312,7 +312,7 @@ class _LevelMapScreenState extends State<LevelMapScreen>
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star_rounded, color: kGold, size: 16),
+                        const GameIcon('star', size: 18),
                         const SizedBox(width: 3),
                         Text(
                           '$stars/${LevelSpec.perChapter * 3}',
@@ -323,8 +323,8 @@ class _LevelMapScreenState extends State<LevelMapScreen>
                         ),
                       ],
                     )
-                  : const Icon(Icons.lock_rounded,
-                      color: Colors.white38, size: 16),
+                  : const Opacity(
+                      opacity: 0.6, child: GameIcon('lock', size: 20)),
             ],
           ),
         ),
@@ -366,7 +366,7 @@ class _LevelMapScreenState extends State<LevelMapScreen>
       alignment: Alignment.center,
       child: unlocked
           ? OutlinedText('$n', size: 26)
-          : const Icon(Icons.lock_rounded, color: Colors.white70, size: 28),
+          : const GameIcon('lock', size: 32),
     );
     if (current) {
       circle = AnimatedBuilder(
@@ -398,16 +398,7 @@ class _LevelMapScreenState extends State<LevelMapScreen>
                   Positioned(
                     top: -4,
                     right: -6,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE53950),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const Icon(Icons.local_fire_department_rounded,
-                          color: Colors.white, size: 16),
-                    ),
+                    child: const GameIcon('hard', size: 28),
                   ),
                 if (stars > 0)
                   Positioned(
@@ -415,14 +406,10 @@ class _LevelMapScreenState extends State<LevelMapScreen>
                     child: Row(
                       children: [
                         for (var i = 0; i < 3; i++)
-                          Icon(
-                            Icons.star_rounded,
-                            size: 20,
-                            color: i < stars ? kGold : Colors.white24,
-                            shadows: const [
-                              Shadow(color: Colors.black45, blurRadius: 3)
-                            ],
-                          ),
+                          i < stars
+                              ? const GameIcon('star', size: 20)
+                              : const Icon(Icons.star_rounded,
+                                  size: 20, color: Colors.white24),
                       ],
                     ),
                   ),
@@ -514,8 +501,7 @@ Future<void> showLevelIntro(
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.local_fire_department_rounded,
-                        color: Colors.white, size: 16),
+                    GameIcon('hard', size: 18),
                     SizedBox(width: 4),
                     Text('HARD LEVEL',
                         style: TextStyle(
@@ -532,8 +518,10 @@ Future<void> showLevelIntro(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   for (var i = 0; i < 3; i++)
-                    Icon(Icons.star_rounded,
-                        size: 30, color: i < stars ? kGold : Colors.white24),
+                    i < stars
+                        ? const GameIcon('star', size: 32)
+                        : const Icon(Icons.star_rounded,
+                            size: 32, color: Colors.white24),
                 ],
               ),
             const SizedBox(height: 16),

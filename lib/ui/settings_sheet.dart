@@ -68,7 +68,7 @@ Future<void> showSettingsSheet(
                   if (inGame) ...[
                     ChunkyButton(
                       label: 'Resume',
-                      icon: Icons.play_arrow_rounded,
+                      leading: const GameIcon('play', size: 30),
                       onPressed: () {
                         sfx.tap();
                         Navigator.pop(context);
@@ -242,7 +242,7 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white),
+      leading: _rowIcon(icon),
       title: Text(label,
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.w800)),
@@ -271,7 +271,7 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SwitchListTile(
-      secondary: Icon(icon, color: Colors.white),
+      secondary: _rowIcon(icon),
       title: Text(label,
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.w800)),
@@ -333,4 +333,20 @@ void showHowToPlay(BuildContext context) {
       ],
     ),
   );
+}
+
+/// Illustrated icons for the rows that have one; Material icons otherwise.
+final Map<IconData, String> _rowArt = {
+  Icons.music_note_rounded: 'music',
+  Icons.help_outline_rounded: 'info',
+  Icons.block_rounded: 'remove_ads',
+  Icons.refresh_rounded: 'replay',
+  Icons.home_rounded: 'home',
+};
+
+Widget _rowIcon(IconData icon) {
+  final art = _rowArt[icon];
+  return art != null
+      ? GameIcon(art, size: 30)
+      : Icon(icon, color: Colors.white, size: 26);
 }

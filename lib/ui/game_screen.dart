@@ -744,7 +744,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               iconSize: 32,
               color: Colors.white,
               onPressed: _openMenu,
-              icon: const Icon(Icons.pause_circle_filled_rounded),
+              icon: const GameIcon('pause', size: 36),
             ),
           ),
           Align(alignment: Alignment.bottomCenter, child: _comboBadge()),
@@ -944,8 +944,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     child: CircleAvatar(
                       radius: 16,
                       backgroundColor: Color(0xCC000000),
-                      child: Icon(Icons.rotate_right_rounded,
-                          color: Colors.white, size: 22),
+                      child: GameIcon('rotate', size: 24),
                     ),
                   ),
               ],
@@ -971,8 +970,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           children: [
             for (final (b, icon, label) in const [
               (Booster.bomb, null, 'Bomb'),
-              (Booster.rotate, Icons.rotate_right_rounded, 'Rotate'),
-              (Booster.undo, Icons.undo_rounded, 'Undo'),
+              (Booster.rotate, GameIcon('rotate', size: 30), 'Rotate'),
+              (Booster.undo, GameIcon('replay', size: 30, flip: true), 'Undo'),
             ])
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1230,7 +1229,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 iconSize: 32,
                 color: Colors.white,
                 onPressed: _openMenu,
-                icon: const Icon(Icons.pause_circle_filled_rounded),
+                icon: const GameIcon('pause', size: 36),
               ),
             ],
           ),
@@ -1343,7 +1342,7 @@ class _BoosterButton extends StatelessWidget {
   });
 
   /// Null draws a bomb (Material has no bomb icon).
-  final IconData? icon;
+  final Widget? icon;
   final String label;
   final int count;
   final bool active;
@@ -1376,10 +1375,11 @@ class _BoosterButton extends StatelessWidget {
                   border: Border.all(
                       color: active ? Colors.white : Colors.white24, width: 2),
                 ),
-                child: icon == null
-                    ? const CustomPaint(
-                        size: Size(26, 26), painter: _BombPainter())
-                    : Icon(icon, color: Colors.white, size: 26),
+                child: Center(
+                  child: icon ??
+                      const CustomPaint(
+                          size: Size(26, 26), painter: _BombPainter()),
+                ),
               ),
               Positioned(
                 right: -6,
@@ -1402,8 +1402,7 @@ class _BoosterButton extends StatelessWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w900,
                               color: Colors.white))
-                      : const Icon(Icons.ondemand_video_rounded,
-                          size: 13, color: Colors.white),
+                      : const GameIcon('watch_ad', size: 16),
                 ),
               ),
             ],
