@@ -114,10 +114,14 @@ class ChunkyButton extends StatelessWidget {
     this.icon,
     this.subtitle,
     this.fontSize = 22,
+    this.expand = false,
   });
 
   final String label;
   final VoidCallback onPressed;
+
+  /// Fill the available width (content stays centred).
+  final bool expand;
 
   /// Defaults to the theme's button colour.
   final Color? color;
@@ -135,6 +139,8 @@ class ChunkyButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: onPressed,
         child: Container(
+          width: expand ? double.infinity : null,
+          alignment: expand ? Alignment.center : null,
           margin: const EdgeInsets.only(bottom: 5),
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
           decoration: BoxDecoration(
@@ -258,6 +264,111 @@ class StatTile extends StatelessWidget {
               color: Colors.white60),
         ),
       ],
+    );
+  }
+}
+
+/// The card used by dialogs and end-of-game screens.
+class GameCard extends StatelessWidget {
+  const GameCard(
+      {super.key,
+      required this.child,
+      this.padding = const EdgeInsets.all(22)});
+
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = GameTheme.of(context);
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color.lerp(theme.sheet, Colors.white, 0.1)!, theme.sheet],
+        ),
+        borderRadius: BorderRadius.circular(30),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
+        boxShadow: const [
+          BoxShadow(
+              color: Colors.black54, blurRadius: 30, offset: Offset(0, 12))
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+/// A banner title that sits across the top edge of a [GameCard].
+class Ribbon extends StatelessWidget {
+  const Ribbon(this.text, {super.key, required this.colors});
+
+  final String text;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: colors),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: const [
+          BoxShadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 5))
+        ],
+      ),
+      child: OutlinedText(text, size: 28),
+    );
+  }
+}
+
+/// A small rounded stat, like "Lines 22".
+class StatPill extends StatelessWidget {
+  const StatPill(
+      {super.key,
+      required this.icon,
+      required this.label,
+      required this.value,
+      this.color});
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 7, 14, 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: color ?? Colors.white70),
+          const SizedBox(width: 6),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white70)),
+          const SizedBox(width: 6),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white)),
+        ],
+      ),
     );
   }
 }

@@ -164,6 +164,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
 
+    // The second-chance countdown ran out while settling.
     expect(find.text('Play Again'), findsOneWidget);
     await tester.tap(find.text('Play Again'));
     await tester.pumpAndSettle();
@@ -329,6 +330,10 @@ void main() {
     for (var i = 0; i < 30; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
+    // A second chance is offered first.
+    expect(find.text('No thanks'), findsOneWidget);
+    await tester.tap(find.text('No thanks'));
+    await tester.pumpAndSettle();
     expect(find.text('Try Again'), findsOneWidget);
     await tester.tap(find.text('Try Again'));
     await tester.pump();
@@ -420,5 +425,44 @@ void main() {
     final game = tester.widget<GameScreen>(find.byType(GameScreen)).controller;
     expect(game.level!.isDaily, isTrue);
     expect(find.text('Daily Challenge'), findsOneWidget);
+  });
+
+  testWidgets('the second-chance offer times out into the results',
+      (tester) async {
+    final app = await pumpApp(tester);
+    await tester.tap(find.text('Classic'));
+    await tester.pumpAndSettle();
+    final game = app.game;
+    for (var r = 0; r < Grid.size; r++) {
+      for (var c = 0; c < Grid.size; c++) {
+        game.grid.cells[r][c] = (r + c).isEven ? 1 : 0;
+      }
+    }
+    game.tray = [line(1), line(2), line(2)];
+    game.place(0, 0, 1);
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Out of space!'), findsWidgets);
+    for (var i = 0; i < 70; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Play Again'), findsOneWidget);
+    expect(find.text('New Best!'), findsWidgets);
+  });
+
+  testWidgets('new game asks first, with the game-styled dialog',
+      (tester) async {
+    final app = await pumpApp(tester);
+    app.game.place(0, 0, 0);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('New game'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Your unfinished game will be lost.'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(app.game.score, greaterThan(0));
   });
 }

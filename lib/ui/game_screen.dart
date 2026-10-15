@@ -24,6 +24,8 @@ import 'theme.dart';
 import 'tips.dart';
 import 'widgets.dart';
 
+part 'game_end.dart';
+
 class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
@@ -115,7 +117,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   // Game over: the board greys out, then the results card appears.
   bool _overStarted = false;
-  bool _showResults = false;
+  _End _end = _End.none;
+  bool get _showResults => _end != _End.none;
+
+  /// Counts down the second-chance offer, then moves on to the results.
+  late final AnimationController _offer = _anim(_offerSeconds * 1000);
+  static const int _offerSeconds = 6;
   Timer? _overTimer;
   late final AnimationController _over = _anim(1400);
   late final AnimationController _results = _anim(400);
@@ -161,7 +168,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _over,
       _results,
       _bestBanner,
-      _hint
+      _hint,
+      _offer,
     ]) {
       c.dispose();
     }
@@ -373,13 +381,39 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       }
       _over.forward(from: 0).whenComplete(() {
         if (!mounted || !_game.gameOver) return;
-        setState(() => _showResults = true);
-        _results.forward(from: 0);
-        if (!_game.isLevel && _game.isNewBest && _game.bestAtStart == 0) {
-          _sfx.newBest();
+        if (_hasSecondChance) {
+          setState(() => _end = _End.offer);
+          _results.forward(from: 0);
+          _offer.forward(from: 0).whenComplete(() {
+            if (mounted && _end == _End.offer && _offer.value >= 1) {
+              _showFinalResults();
+            }
+          });
+        } else {
+          _showFinalResults();
         }
       });
     });
+  }
+
+  bool get _hasSecondChance =>
+      !_game.won &&
+      (_game.canRevive ||
+          _game.canAddMoves ||
+          (_game.canUndo && widget.app.boosters.count(Booster.undo) > 0));
+
+  void _showFinalResults() {
+    _offer.stop();
+    setState(() => _end = _End.results);
+    _results.forward(from: 0);
+    if (!_game.isLevel && _game.isNewBest && _game.bestAtStart == 0) {
+      _sfx.newBest();
+    }
+  }
+
+  void _declineOffer() {
+    _sfx.tap();
+    _showFinalResults();
   }
 
   /// After a finished game, shows an interstitial now and then.
@@ -401,7 +435,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _dailyReward = null;
     _overTimer?.cancel();
     _overStarted = false;
-    _showResults = false;
+    _end = _End.none;
+    _offer.reset();
     _over.reset();
     _results.reset();
     _clear.value = 1;
@@ -437,9 +472,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _overTimer?.cancel();
     setState(() {
       _overStarted = false;
-      _showResults = false;
+      _end = _End.none;
       _dailyReward = null;
     });
+    _offer.reset();
     _over.reset();
     _results.reset();
   }
@@ -448,9 +484,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Future<bool> _watchAd() async {
     if (_watchingAd) return false;
     setState(() => _watchingAd = true);
+    _offer.stop();
     final ok = await widget.app.watchAd();
     if (!mounted) return false;
     setState(() => _watchingAd = false);
+    if (!ok && _end == _End.offer) {
+      _offer.forward().whenComplete(() {
+        if (mounted && _end == _End.offer && _offer.value >= 1) {
+          _showFinalResults();
+        }
+      });
+    }
     if (!ok) {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(
@@ -567,26 +611,30 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         body: AnimatedContainer(
           duration: const Duration(milliseconds: 400),
           decoration: BoxDecoration(gradient: theme.background),
-          child: SafeArea(
-            child: AnimatedBuilder(
-              animation: Listenable.merge(
-                [
-                  _game,
-                  _lift,
-                  _return,
-                  _pop,
-                  _clear,
-                  _labels,
-                  _spawn,
-                  _over,
-                  _results,
-                  _bestBanner,
-                  _hint,
-                  widget.app.boosters,
-                  widget.app.ads,
-                ],
-              ),
-              builder: (context, _) => LayoutBuilder(builder: _buildLayout),
+          child: AnimatedBuilder(
+            animation: Listenable.merge(
+              [
+                _game,
+                _lift,
+                _return,
+                _pop,
+                _clear,
+                _labels,
+                _spawn,
+                _over,
+                _results,
+                _offer,
+                _bestBanner,
+                _hint,
+                widget.app.boosters,
+                widget.app.ads,
+              ],
+            ),
+            builder: (context, _) => Stack(
+              children: [
+                SafeArea(child: LayoutBuilder(builder: _buildLayout)),
+                if (_showResults) Positioned.fill(child: _endOverlay(theme)),
+              ],
             ),
           ),
         ),
@@ -651,11 +699,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   _stackKey.currentContext?.findRenderObject() as RenderBox?),
         ..._floatingPiece(dragged),
         if (_bestBanner.isAnimating) _newBestBanner(),
-        if (_showResults)
-          Positioned.fill(
-              child: _game.isLevel
-                  ? _levelResultsCard(theme)
-                  : _resultsCard(theme)),
       ],
     );
   }
@@ -960,41 +1003,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  /// Revive, extra moves or undo, offered when a game ends.
-  List<Widget> _secondChance() {
-    final adReady = widget.app.ads.rewardedReady;
-    final undos = widget.app.boosters.count(Booster.undo);
-    return [
-      if (_game.canRevive)
-        ChunkyButton(
-          label: 'Revive',
-          subtitle: adReady ? 'Watch an ad' : 'Ad not ready',
-          icon: Icons.ondemand_video_rounded,
-          color: const Color(0xFFFF8A00),
-          onPressed: adReady && !_watchingAd ? _revive : () {},
-        ),
-      if (_game.canAddMoves)
-        ChunkyButton(
-          label: '+${GameController.extraMoves} Moves',
-          subtitle: adReady ? 'Watch an ad' : 'Ad not ready',
-          icon: Icons.ondemand_video_rounded,
-          color: const Color(0xFFFF8A00),
-          onPressed: adReady && !_watchingAd ? _addMoves : () {},
-        ),
-      if (_game.canUndo && undos > 0 && !_game.won)
-        TextButton.icon(
-          onPressed: _undoFromResults,
-          icon: const Icon(Icons.undo_rounded, color: Colors.white),
-          label: Text(
-            'Undo last move ($undos left)',
-            style: const TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
-          ),
-        ),
-      const SizedBox(height: 10),
-    ];
-  }
-
   static const ColorFilter _greyscale = ColorFilter.matrix([
     0.33, 0.33, 0.33, 0, 0, //
     0.33, 0.33, 0.33, 0, 0, //
@@ -1189,121 +1197,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ];
   }
 
-  Widget _resultsCard(GameTheme theme) {
-    final t = Curves.easeOutBack.transform(_results.value);
-    final newBest = _game.isNewBest;
-    return ColoredBox(
-      color:
-          Colors.black.withValues(alpha: 0.55 * _results.value.clamp(0.0, 1.0)),
-      child: Center(
-        child: Transform.scale(
-          scale: 0.7 + 0.3 * t,
-          child: Opacity(
-            opacity: _results.value.clamp(0.0, 1.0),
-            child: Container(
-              width: 310,
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color.lerp(theme.sheet, Colors.white, 0.08)!,
-                    theme.sheet
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white24, width: 2),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Colors.black45,
-                      blurRadius: 24,
-                      offset: Offset(0, 10))
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (newBest) ...[
-                    const CrownIcon(size: 48),
-                    const SizedBox(height: 4),
-                    const OutlinedText('New Best!',
-                        size: 34,
-                        colors: [Color(0xFFFFF6C8), Color(0xFFFFB62E)]),
-                  ] else
-                    const OutlinedText('Game Over', size: 34),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'SCORE',
-                    style: TextStyle(
-                        fontSize: 14,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white70),
-                  ),
-                  TweenAnimationBuilder<int>(
-                    tween: IntTween(begin: 0, end: _game.score),
-                    duration: const Duration(milliseconds: 900),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, _) =>
-                        OutlinedText('$value', size: 52),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CrownIcon(size: 22),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Best ${_game.best}',
-                        style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: kGold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      StatTile(value: '${_game.linesThisGame}', label: 'LINES'),
-                      StatTile(
-                          value: '${_game.bestComboThisGame}',
-                          label: 'BEST COMBO'),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  ..._secondChance(),
-                  ChunkyButton(
-                    label: 'Play Again',
-                    icon: Icons.replay_rounded,
-                    onPressed: () {
-                      _sfx.tap();
-                      _restart();
-                    },
-                  ),
-                  const SizedBox(height: 6),
-                  TextButton.icon(
-                    onPressed: _goHome,
-                    icon: const Icon(Icons.home_rounded, color: Colors.white70),
-                    label: const Text(
-                      'Home',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white70),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ---------------------------------------------------------------- levels
 
   Widget _levelHud(GameTheme theme) {
@@ -1425,207 +1318,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
-  Widget _levelResultsCard(GameTheme theme) {
-    final level = _game.level!;
-    final won = _game.won;
-    final stars = _game.stars;
-    final t = Curves.easeOutBack.transform(_results.value);
-    final hasNext = level.number < LevelSpec.count && !level.isDaily;
-    final daily = widget.app.daily;
-
-    Widget star(int i) {
-      final appear = Curves.elasticOut.transform(
-          ((_results.value - 0.25 - i * 0.18) / 0.5).clamp(0.0, 1.0));
-      final lit = i < stars;
-      return Transform.translate(
-        offset: Offset(0, i == 1 ? -12 : 0),
-        child: Transform.scale(
-          scale: lit ? appear : 1,
-          child: Icon(
-            Icons.star_rounded,
-            size: i == 1 ? 72 : 58,
-            color: lit ? kGold : Colors.white.withValues(alpha: 0.18),
-            shadows: lit
-                ? const [
-                    Shadow(
-                        color: Colors.black38,
-                        blurRadius: 8,
-                        offset: Offset(0, 3))
-                  ]
-                : null,
-          ),
-        ),
-      );
-    }
-
-    return ColoredBox(
-      color:
-          Colors.black.withValues(alpha: 0.55 * _results.value.clamp(0.0, 1.0)),
-      child: Center(
-        child: Transform.scale(
-          scale: 0.7 + 0.3 * t,
-          child: Opacity(
-            opacity: _results.value.clamp(0.0, 1.0),
-            child: Container(
-              width: 310,
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color.lerp(theme.sheet, Colors.white, 0.08)!,
-                    theme.sheet
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white24, width: 2),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Colors.black45,
-                      blurRadius: 24,
-                      offset: Offset(0, 10))
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    level.isDaily ? 'DAILY CHALLENGE' : 'LEVEL ${level.number}',
-                    style: const TextStyle(
-                        fontSize: 14,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white70),
-                  ),
-                  const SizedBox(height: 4),
-                  if (won) ...[
-                    const OutlinedText('Complete!',
-                        size: 36,
-                        colors: [Color(0xFFEFFFF0), Color(0xFF5FE37A)]),
-                    const SizedBox(height: 10),
-                    if (!level.isDaily)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [star(0), star(1), star(2)],
-                      )
-                    else ...[
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.local_fire_department_rounded,
-                              color: Color(0xFFFF8A00), size: 30),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${daily.streak} day streak',
-                            style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white),
-                          ),
-                        ],
-                      ),
-                      if (_dailyReward != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            'Reward: +1 ${boosterName(_dailyReward!)}',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: theme.accent),
-                          ),
-                        ),
-                    ],
-                  ] else ...[
-                    OutlinedText(
-                      _game.endReason == EndReason.outOfMoves
-                          ? 'Out of moves'
-                          : 'No more space',
-                      size: 32,
-                      colors: const [Color(0xFFFFF3C4), Color(0xFFFFB13B)],
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      alignment: WrapAlignment.center,
-                      children: [for (final g in level.goals) _goalChip(g)],
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  Text(
-                    'Score ${_game.score}',
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white),
-                  ),
-                  const SizedBox(height: 16),
-                  if (!won) ..._secondChance(),
-                  if (won && hasNext)
-                    ChunkyButton(
-                      label: 'Next Level',
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: () => _openLevel(level.number + 1),
-                    )
-                  else
-                    ChunkyButton(
-                      label: level.isDaily && won
-                          ? 'Play Again'
-                          : (won ? 'Play Again' : 'Try Again'),
-                      icon: Icons.replay_rounded,
-                      onPressed: () {
-                        _sfx.tap();
-                        _restart();
-                      },
-                    ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    children: [
-                      if (won && hasNext)
-                        TextButton.icon(
-                          onPressed: () {
-                            _sfx.tap();
-                            _restart();
-                          },
-                          icon: const Icon(Icons.replay_rounded,
-                              color: Colors.white70),
-                          label: const Text(
-                            'Replay',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white70),
-                          ),
-                        ),
-                      TextButton.icon(
-                        onPressed: _goHome,
-                        icon: const Icon(Icons.map_rounded,
-                            color: Colors.white70),
-                        label: Text(
-                          level.isDaily ? 'Home' : 'Levels',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white70),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 enum _Mode { none, bomb, rotate }
+
+/// What the end-of-game overlay shows.
+enum _End { none, offer, results }
 
 String boosterName(Booster b) => switch (b) {
       Booster.bomb => 'Bomb',

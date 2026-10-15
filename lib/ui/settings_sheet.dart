@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
 import '../services/app_services.dart';
+import 'dialogs.dart';
 import 'theme.dart';
 import 'theme_picker.dart';
 import 'widgets.dart';
@@ -208,56 +209,23 @@ Future<void> showSettingsSheet(
   );
 }
 
-Future<bool> _confirmRestart(BuildContext context) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: GameTheme.of(context).sheet,
-      title:
-          const Text('Restart?', style: TextStyle(fontWeight: FontWeight.w900)),
-      content: const Text('Your current score will be lost.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(
-              backgroundColor: GameTheme.of(context).button),
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Restart', style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    ),
-  );
-  return ok == true;
-}
+Future<bool> _confirmRestart(BuildContext context) => showConfirmDialog(
+      context,
+      icon: Icons.refresh_rounded,
+      title: 'Restart?',
+      message: 'Your current score will be lost.',
+      confirmLabel: 'Restart',
+      iconColor: const Color(0xFFFF8A00),
+    );
 
 /// Asks before throwing away a game in progress.
-Future<bool> confirmNewGame(BuildContext context) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: GameTheme.of(context).sheet,
-      title: const Text('Start a new game?',
-          style: TextStyle(fontWeight: FontWeight.w900)),
-      content: const Text('Your unfinished game will be lost.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(
-              backgroundColor: GameTheme.of(context).button),
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('New game', style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    ),
-  );
-  return ok == true;
-}
+Future<bool> confirmNewGame(BuildContext context) => showConfirmDialog(
+      context,
+      icon: Icons.add_rounded,
+      title: 'New game?',
+      message: 'Your unfinished game will be lost.',
+      confirmLabel: 'Start',
+    );
 
 class _Row extends StatelessWidget {
   const _Row(
