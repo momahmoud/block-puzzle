@@ -76,8 +76,9 @@ class _BannerSlotState extends State<BannerSlot> {
       // The standard anchored size (about 50-60pt). The newer "large"
       // anchored banner is up to ~130pt tall, which shrinks the board too
       // much, so the older call is used on purpose.
-      // ignore: deprecated_member_use
-      final size = await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(width);
+      final size =
+          // ignore: deprecated_member_use
+          await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(width);
       if (!mounted || size == null || !widget.app.ads.bannerAllowed) return;
       final ad = BannerAd(
         adUnitId: AppConfig.bannerAdUnit,
@@ -112,19 +113,13 @@ class _BannerSlotState extends State<BannerSlot> {
   @override
   Widget build(BuildContext context) {
     final ad = _ad;
-    // Until an ad arrives, just keep clear of the home indicator.
-    if (ad == null || !_loaded) {
-      return const SafeArea(top: false, child: SizedBox(width: double.infinity));
-    }
+    if (ad == null || !_loaded) return const SizedBox.shrink();
     return ColoredBox(
       color: Colors.black.withValues(alpha: 0.25),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          width: ad.size.width.toDouble(),
-          height: ad.size.height.toDouble(),
-          child: AdWidget(ad: ad),
-        ),
+      child: SizedBox(
+        width: ad.size.width.toDouble(),
+        height: ad.size.height.toDouble(),
+        child: AdWidget(ad: ad),
       ),
     );
   }

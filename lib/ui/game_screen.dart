@@ -1436,8 +1436,7 @@ class _BoosterButton extends StatelessWidget {
   }
 }
 
-/// The banner when ads are allowed; otherwise just the bottom safe-area
-/// padding, which the game layout no longer adds itself.
+/// The banner when ads are allowed; nothing otherwise.
 class _BannerArea extends StatelessWidget {
   const _BannerArea({required this.app});
 
@@ -1447,9 +1446,8 @@ class _BannerArea extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: Listenable.merge([app.ads, app.purchases]),
-      builder: (context, child) => app.ads.bannerAllowed
-          ? child!
-          : const SafeArea(top: false, child: SizedBox(width: double.infinity)),
+      builder: (context, child) =>
+          app.ads.bannerAllowed ? child! : const SizedBox.shrink(),
       child: BannerSlot(app: app),
     );
   }
