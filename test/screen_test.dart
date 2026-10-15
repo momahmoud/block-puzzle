@@ -179,7 +179,7 @@ void main() {
     app.game.place(0, 0, 0);
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Continue · Score ${app.game.score}'), findsOneWidget);
-    expect(find.text('New classic game'), findsOneWidget);
+    expect(find.text('New game'), findsOneWidget);
 
     await tester.tap(find.text('Classic'));
     await tester.pumpAndSettle();
@@ -203,7 +203,7 @@ void main() {
 
   testWidgets('picking a theme changes it and saves it', (tester) async {
     final app = await pumpApp(tester);
-    await tester.tap(find.text('Themes'));
+    await tester.tap(find.byTooltip('Themes'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Wood'));
@@ -258,7 +258,7 @@ void main() {
 
   testWidgets('levels: map, intro, win, stars and next level', (tester) async {
     final app = await pumpApp(tester);
-    expect(find.text('Level 1 · ★ 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('Levels, Level 1'), findsOneWidget);
     await tester.tap(find.text('Levels'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -340,7 +340,7 @@ void main() {
     // iPhone SE: 375 x 667 points.
     await pumpApp(tester, size: const Size(750, 1334), pixelRatio: 2);
     expect(tester.takeException(), isNull);
-    expect(find.text('Daily Challenge'), findsOneWidget);
+    expect(find.text('Daily'), findsOneWidget);
   });
 
   testWidgets('bomb booster clears a 3x3 area', (tester) async {
@@ -407,7 +407,7 @@ void main() {
 
   testWidgets('the daily challenge opens from home', (tester) async {
     await pumpApp(tester);
-    await tester.tap(find.text('Daily Challenge'));
+    await tester.tap(find.text('Daily'));
     // The move limit is worked out in an isolate.
     await tester
         .runAsync(() => Future<void>.delayed(const Duration(seconds: 3)));

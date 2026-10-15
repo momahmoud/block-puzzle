@@ -40,6 +40,30 @@ Future<void> showSettingsSheet(
                 children: [
                   OutlinedText(inGame ? 'Paused' : 'Settings', size: 30),
                   const SizedBox(height: 12),
+                  if (!inGame)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          for (final (value, label) in [
+                            (app.stats.gamesPlayed, 'GAMES'),
+                            (app.stats.linesCleared, 'LINES'),
+                            (app.stats.bestCombo, 'BEST COMBO'),
+                          ])
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: StatTile(value: '$value', label: label),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   if (inGame) ...[
                     ChunkyButton(
                       label: 'Resume',

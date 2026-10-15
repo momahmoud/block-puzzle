@@ -139,46 +139,88 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _content(GameTheme theme) {
-    final stats = widget.stats;
     final progress = _game.hasProgress;
-    final games = widget.app.games;
     return LayoutBuilder(
       builder: (context, box) {
-        // Small phones (like an iPhone SE) get a smaller logo and title.
         final compact = box.maxHeight < 720;
-        final gap = compact ? 8.0 : 12.0;
-        // Fills the screen when there is room (the spacers share it out) and
-        // scrolls when there is not, e.g. with large text.
+        // Fills the screen when there is room and scrolls when there is
+        // not, e.g. with large text.
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: box.maxHeight),
             child: IntrinsicHeight(
               child: Column(
                 children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: IconButton(
-                      tooltip: 'Settings',
-                      iconSize: 30,
-                      color: Colors.white,
-                      icon: const Icon(Icons.settings_rounded),
-                      onPressed: () {
-                        widget.sfx.tap();
-                        showSettingsSheet(context, app: widget.app);
-                      },
-                    ),
+                  Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Themes',
+                        iconSize: 28,
+                        color: Colors.white,
+                        icon: const Icon(Icons.palette_rounded),
+                        onPressed: () {
+                          widget.sfx.tap();
+                          showThemePicker(context,
+                              settings: widget.settings, sfx: widget.sfx);
+                        },
+                      ),
+                      if (widget.app.games.enabled) ...[
+                        IconButton(
+                          tooltip: 'Leaderboard',
+                          iconSize: 28,
+                          color: Colors.white,
+                          icon: const Icon(Icons.leaderboard_rounded),
+                          onPressed: widget.app.games.showLeaderboards,
+                        ),
+                        IconButton(
+                          tooltip: 'Awards',
+                          iconSize: 28,
+                          color: Colors.white,
+                          icon: const Icon(Icons.emoji_events_rounded),
+                          onPressed: widget.app.games.showAchievements,
+                        ),
+                      ],
+                      const Spacer(),
+                      IconButton(
+                        tooltip: 'Settings',
+                        iconSize: 28,
+                        color: Colors.white,
+                        icon: const Icon(Icons.settings_rounded),
+                        onPressed: () {
+                          widget.sfx.tap();
+                          showSettingsSheet(context, app: widget.app);
+                        },
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  _enter(0, _logo(theme, compact ? 72 : 120)),
-                  SizedBox(height: compact ? 8 : 16),
-                  _enter(1, OutlinedText('BLOCK', size: compact ? 44 : 56)),
+                  const Spacer(flex: 2),
+                  _enter(0, _logo(theme, compact ? 72 : 100)),
+                  SizedBox(height: compact ? 10 : 18),
+                  _enter(1, OutlinedText('BLOCK', size: compact ? 42 : 52)),
+                  _enter(
+                      1,
+                      OutlinedText('PUZZLE',
+                          size: compact ? 32 : 40,
+                          colors: [Colors.white, theme.accent])),
+                  const SizedBox(height: 14),
                   _enter(
                     1,
-                    OutlinedText('PUZZLE',
-                        size: compact ? 34 : 44,
-                        colors: [Colors.white, theme.accent]),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CrownIcon(size: 22),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Best ${_game.best}',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: kGold),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
+                  const Spacer(flex: 2),
                   _enter(
                     2,
                     _ModeButton(
@@ -186,152 +228,72 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       title: 'Classic',
                       subtitle: progress
                           ? 'Continue · Score ${_game.score}'
-                          : 'Best ${_game.best}',
+                          : 'Endless mode',
                       color: theme.button,
                       onPressed: _play,
                     ),
                   ),
-                  if (progress)
-                    _enter(
-                      2,
-                      SizedBox(
-                        height: 34,
-                        child: TextButton(
-                          onPressed: () => _play(fresh: true),
-                          child: const Text(
-                            'New classic game',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white70),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    SizedBox(height: gap),
+                  SizedBox(
+                    height: 40,
+                    child: progress
+                        ? TextButton(
+                            onPressed: () => _play(fresh: true),
+                            child: const Text(
+                              'New game',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white70),
+                            ),
+                          )
+                        : null,
+                  ),
                   _enter(
                     3,
-                    ListenableBuilder(
-                      listenable: widget.levels,
-                      builder: (context, _) {
-                        final levels = widget.levels;
-                        return _ModeButton(
-                          icon: Icons.flag_rounded,
-                          title: 'Levels',
-                          subtitle: levels.allDone
-                              ? 'All done · ★ ${levels.totalStars}'
-                              : 'Level ${levels.unlocked} · ★ ${levels.totalStars}',
-                          color: theme.block(6),
-                          onPressed: _openLevels,
-                        );
-                      },
-                    ),
-                  ),
-                  SizedBox(height: gap),
-                  _enter(
-                    4,
-                    ListenableBuilder(
-                      listenable: widget.app.daily,
-                      builder: (context, _) {
-                        final daily = widget.app.daily;
-                        final streak = daily.streak;
-                        return _ModeButton(
-                          icon: Icons.calendar_today_rounded,
-                          title: 'Daily Challenge',
-                          subtitle: daily.doneToday
-                              ? 'Done today · 🔥 $streak'
-                              : (streak > 0
-                                  ? 'Keep your streak · 🔥 $streak'
-                                  : 'A new level every day'),
-                          color: const Color(0xFFFF8A00),
-                          badge: daily.doneToday ? null : 'NEW',
-                          onPressed: _openDaily,
-                        );
-                      },
-                    ),
-                  ),
-                  SizedBox(height: compact ? 10 : 20),
-                  _enter(
-                    5,
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 32),
-                      padding: EdgeInsets.symmetric(vertical: compact ? 8 : 12),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white12),
-                      ),
+                    SizedBox(
+                      width: 290,
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           Expanded(
-                              child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: StatTile(
-                                      value: '${stats.gamesPlayed}',
-                                      label: 'GAMES'))),
+                            child: ListenableBuilder(
+                              listenable: widget.levels,
+                              builder: (context, _) => _ModeTile(
+                                icon: Icons.flag_rounded,
+                                title: 'Levels',
+                                subtitle: widget.levels.allDone
+                                    ? '★ ${widget.levels.totalStars}'
+                                    : 'Level ${widget.levels.unlocked}',
+                                color: theme.block(6),
+                                onPressed: _openLevels,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
-                              child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: StatTile(
-                                      value: '${stats.linesCleared}',
-                                      label: 'LINES'))),
-                          Expanded(
-                              child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: StatTile(
-                                      value: '${stats.bestCombo}',
-                                      label: 'BEST COMBO'))),
+                            child: ListenableBuilder(
+                              listenable: widget.app.daily,
+                              builder: (context, _) {
+                                final daily = widget.app.daily;
+                                return _ModeTile(
+                                  icon: Icons.calendar_today_rounded,
+                                  title: 'Daily',
+                                  subtitle: daily.doneToday
+                                      ? 'Done ✓'
+                                      : (daily.streak > 0
+                                          ? '🔥 ${daily.streak}'
+                                          : 'New today'),
+                                  color: const Color(0xFFFF8A00),
+                                  dot: !daily.doneToday,
+                                  onPressed: _openDaily,
+                                );
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  _enter(
-                    6,
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        RoundIconButton(
-                          icon: Icons.palette_rounded,
-                          label: 'Themes',
-                          onPressed: () {
-                            widget.sfx.tap();
-                            showThemePicker(context,
-                                settings: widget.settings, sfx: widget.sfx);
-                          },
-                        ),
-                        if (games.enabled) ...[
-                          RoundIconButton(
-                            icon: Icons.leaderboard_rounded,
-                            label: 'Leaderboard',
-                            onPressed: () {
-                              widget.sfx.tap();
-                              games.showLeaderboards();
-                            },
-                          ),
-                          RoundIconButton(
-                            icon: Icons.emoji_events_rounded,
-                            label: 'Awards',
-                            onPressed: () {
-                              widget.sfx.tap();
-                              games.showAchievements();
-                            },
-                          ),
-                        ],
-                        RoundIconButton(
-                          icon: Icons.help_outline_rounded,
-                          label: 'How to play',
-                          onPressed: () {
-                            widget.sfx.tap();
-                            showHowToPlay(context);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: compact ? 8 : 20),
+                  const Spacer(flex: 3),
                 ],
               ),
             ),
@@ -407,7 +369,6 @@ class _ModeButton extends StatelessWidget {
     required this.subtitle,
     required this.color,
     required this.onPressed,
-    this.badge,
   });
 
   final IconData icon;
@@ -415,9 +376,6 @@ class _ModeButton extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback onPressed;
-
-  /// A small label in the corner, like "NEW".
-  final String? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -494,23 +452,96 @@ class _ModeButton extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           button,
-          if (badge != null)
-            Positioned(
-              top: -8,
-              right: 14,
+        ],
+      ),
+    );
+  }
+}
+
+/// A compact square-ish button for a secondary mode.
+class _ModeTile extends StatelessWidget {
+  const _ModeTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onPressed,
+    this.dot = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onPressed;
+
+  /// A small red dot in the corner: something new to play.
+  final bool dot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '$title, $subtitle',
+      excludeSemantics: true,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Material(
+            color: Color.lerp(color, Colors.black, 0.32),
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: onPressed,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 5),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color.lerp(color, Colors.white, 0.15)!, color],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  children: [
+                    Icon(icon, color: Colors.white, size: 28),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (dot)
+            Positioned(
+              top: -3,
+              right: -3,
+              child: Container(
+                width: 16,
+                height: 16,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE53950),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                child: Text(
-                  badge!,
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
                 ),
               ),
             ),
