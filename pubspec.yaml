@@ -1,0 +1,52 @@
+name: block_puzzle
+description: A block-placement puzzle game built with Flutter.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  audioplayers: ^6.8.1
+  flutter:
+    sdk: flutter
+  games_services: ^5.3.0
+  google_mobile_ads: ^9.1.0
+  in_app_purchase: ^3.3.1
+  shared_preferences: ^2.3.0
+  url_launcher: ^6.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
+
+flutter:
+  uses-material-design: true
+  # google_mobile_ads does not build under Swift Package Manager yet; use
+  # CocoaPods (see the post_install fix in ios/Podfile).
+  config:
+    enable-swift-package-manager: false
+  assets:
+    - assets/sounds/
+
+# App icon: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/icon.png
+  remove_alpha_ios: true
+  adaptive_icon_background: "#3A1C7A"
+  adaptive_icon_foreground: assets/images/icon_foreground.png
+  min_sdk_android: 21
+
+# Launch screen: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#24104F"
+  image: assets/images/splash.png
+  android_12:
+    color: "#24104F"
+    image: assets/images/splash.png
+  fullscreen: false

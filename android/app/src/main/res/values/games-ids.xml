@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder. Replace this whole file with the games-ids.xml that Play
+     Console generates (Play Games Services > Configuration > Get resources),
+     then set AppConfig.gameServicesEnabled to true in lib/config.dart. -->
+<resources>
+    <string name="app_id" translatable="false">000000000000</string>
+    <string name="package_name" translatable="false">com.fluxylabs.blockPuzzle</string>
+</resources>
