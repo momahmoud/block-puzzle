@@ -11,7 +11,6 @@ import '../services/stats.dart';
 import '../services/settings.dart';
 import '../services/sfx.dart';
 import 'game_screen.dart';
-import 'palette.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -62,23 +61,10 @@ class GoalIcon extends StatelessWidget {
         GoalType.score => GameIcon('star', size: size),
         GoalType.lines => Icon(Icons.view_week_rounded,
             color: const Color(0xFF8FE3FF), size: size),
-        GoalType.gems => SizedBox(
-            width: size,
-            height: size,
-            child: CustomPaint(painter: _GemIconPainter()),
-          ),
+        GoalType.gems => GameIcon('gem', size: size),
         GoalType.ice => Icon(Icons.ac_unit_rounded,
             color: const Color(0xFFBDEBFF), size: size),
       };
-}
-
-class _GemIconPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) =>
-      paintGem(canvas, Offset.zero & size, scale: 1.5);
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// A winding path of levels, from level 1 at the bottom upwards.

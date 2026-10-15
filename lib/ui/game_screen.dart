@@ -969,7 +969,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             for (final (b, icon, label) in const [
-              (Booster.bomb, null, 'Bomb'),
+              (Booster.bomb, GameIcon('bomb', size: 32), 'Bomb'),
               (Booster.rotate, GameIcon('rotate', size: 30), 'Rotate'),
               (Booster.undo, GameIcon('replay', size: 30, flip: true), 'Undo'),
             ])
@@ -1341,8 +1341,7 @@ class _BoosterButton extends StatelessWidget {
     required this.onTap,
   });
 
-  /// Null draws a bomb (Material has no bomb icon).
-  final Widget? icon;
+  final Widget icon;
   final String label;
   final int count;
   final bool active;
@@ -1375,11 +1374,7 @@ class _BoosterButton extends StatelessWidget {
                   border: Border.all(
                       color: active ? Colors.white : Colors.white24, width: 2),
                 ),
-                child: Center(
-                  child: icon ??
-                      const CustomPaint(
-                          size: Size(26, 26), painter: _BombPainter()),
-                ),
+                child: Center(child: icon),
               ),
               Positioned(
                 right: -6,
@@ -1411,33 +1406,4 @@ class _BoosterButton extends StatelessWidget {
       ),
     );
   }
-}
-
-/// A round bomb with a lit fuse.
-class _BombPainter extends CustomPainter {
-  const _BombPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width;
-    final body = Offset(s * 0.45, s * 0.58);
-    canvas.drawCircle(body, s * 0.36, Paint()..color = const Color(0xFF1E1B2E));
-    canvas.drawCircle(body.translate(-s * 0.12, -s * 0.12), s * 0.09,
-        Paint()..color = Colors.white38);
-    canvas.drawLine(
-      Offset(s * 0.66, s * 0.3),
-      Offset(s * 0.8, s * 0.16),
-      Paint()
-        ..color = const Color(0xFFD9B26A)
-        ..strokeWidth = s * 0.08
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.drawCircle(Offset(s * 0.85, s * 0.12), s * 0.11,
-        Paint()..color = const Color(0xFFFFB13B));
-    canvas.drawCircle(Offset(s * 0.85, s * 0.12), s * 0.05,
-        Paint()..color = const Color(0xFFFFF3C4));
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
