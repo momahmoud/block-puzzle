@@ -128,11 +128,11 @@ extension _EndViews on _GameScreenState {
             const SizedBox(height: 10),
             withAd
                 ? _secondaryButton(
-                    'Undo  (\$undos left)', 'replay', _undoFromResults,
+                    'Undo  ($undos left)', 'replay', _undoFromResults,
                     flip: true)
                 : ChunkyButton(
                     label: 'Undo last move',
-                    subtitle: '\$undos left',
+                    subtitle: '$undos left',
                     leading: const GameIcon('replay', size: 30, flip: true),
                     expand: true,
                     onPressed: _undoFromResults,

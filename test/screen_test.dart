@@ -489,4 +489,24 @@ void main() {
     expect(find.byTooltip('Remove ads'), findsNothing);
     expect(find.byTooltip('Pause'), findsOneWidget);
   });
+
+  testWidgets('the second-chance card shows how many undos are left', (tester) async {
+    final app = await pumpApp(tester);
+    await tester.tap(find.text('Classic'));
+    await tester.pumpAndSettle();
+    final game = app.game;
+    for (var r = 0; r < Grid.size; r++) {
+      for (var c = 0; c < Grid.size; c++) {
+        game.grid.cells[r][c] = (r + c).isEven ? 1 : 0;
+      }
+    }
+    game.tray = [line(1), line(2), line(2)];
+    game.place(0, 0, 1);
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Undo  (2 left)'), findsOneWidget);
+    await tester.tap(find.text('No thanks'));
+    await tester.pumpAndSettle();
+  });
 }
