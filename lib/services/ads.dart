@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import 'purchases.dart';
@@ -12,15 +13,21 @@ import 'purchases.dart';
 /// Consent comes first: Google's consent form is shown where the law asks
 /// for it (EU/UK), and no ad is requested until AdMob says it may be.
 class Ads extends ChangeNotifier {
-  Ads(this._purchases);
+  Ads(this._purchases, this._prefs);
 
   final Purchases _purchases;
+  final SharedPreferences _prefs;
+
+  /// Finished games since the last interstitial. Saved, so it adds up over
+  /// short sessions instead of starting again at every launch.
+  static const _gamesKey = 'ads.gamesSinceInterstitial';
+  int get _gamesSinceInterstitial => _prefs.getInt(_gamesKey) ?? 0;
+  set _gamesSinceInterstitial(int value) => _prefs.setInt(_gamesKey, value);
 
   bool _canRequest = false;
   RewardedAd? _rewarded;
   InterstitialAd? _interstitial;
   bool _loadingRewarded = false;
-  int _gamesSinceInterstitial = 0;
   bool _privacyOptionsRequired = false;
 
   /// Lets tests (and debug builds without Play services) grant rewards.
@@ -147,10 +154,13 @@ class Ads extends ChangeNotifier {
   /// every few games unless ads were removed.
   Future<void> gameFinished() async {
     if (_purchases.adsRemoved) return;
-    _gamesSinceInterstitial++;
+    _gamesSinceInterstitial = _gamesSinceInterstitial + 1;
     final ad = _interstitial;
-    if (ad == null ||
-        _gamesSinceInterstitial < AppConfig.interstitialEveryGames) {
+    if (ad == null || _gamesSinceInterstitial < AppConfig.interstitialEveryGames) {
+      final left = AppConfig.interstitialEveryGames - _gamesSinceInterstitial;
+      debugPrint(ad == null && left <= 0
+          ? 'Ads: interstitial due but not loaded yet'
+          : 'Ads: interstitial in $left more finished game(s)');
       _loadInterstitial();
       return;
     }

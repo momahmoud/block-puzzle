@@ -14,7 +14,7 @@ import 'stats.dart';
 
 /// Everything the screens share, created once at start-up.
 class AppServices {
-  AppServices(SharedPreferences prefs)
+  AppServices(this.prefs)
       : settings = Settings(prefs),
         stats = Stats(prefs),
         levels = LevelProgress(prefs),
@@ -24,9 +24,10 @@ class AppServices {
         games = GameServices(prefs) {
     sfx = Sfx(settings);
     music = Music(settings);
-    ads = Ads(purchases);
+    ads = Ads(purchases, prefs);
   }
 
+  final SharedPreferences prefs;
   final Settings settings;
   final Stats stats;
   final LevelProgress levels;
