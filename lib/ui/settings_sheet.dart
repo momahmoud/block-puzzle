@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config.dart';
 import '../services/app_services.dart';
 import 'dialogs.dart';
+import 'remove_ads.dart';
 import 'theme.dart';
 import 'theme_picker.dart';
 import 'widgets.dart';
@@ -116,24 +117,16 @@ Future<void> showSettingsSheet(
                     label: 'How to play',
                     onTap: () => showHowToPlay(context),
                   ),
-                  if (!purchases.adsRemoved && purchases.available)
+                  if (!purchases.adsRemoved)
                     _Row(
                       icon: Icons.block_rounded,
                       label: 'Remove ads',
-                      trailing: purchases.busy
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(
-                              purchases.price ?? '',
-                              style: TextStyle(
-                                  color: theme.accent,
-                                  fontWeight: FontWeight.w900),
-                            ),
-                      onTap: purchases.buyRemoveAds,
+                      trailing: Text(
+                        purchases.price ?? '',
+                        style: TextStyle(
+                            color: theme.accent, fontWeight: FontWeight.w900),
+                      ),
+                      onTap: () => showRemoveAdsOffer(context, app),
                     ),
                   if (purchases.adsRemoved)
                     const _Row(

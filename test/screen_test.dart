@@ -465,4 +465,28 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(app.game.score, greaterThan(0));
   });
+
+  testWidgets('remove ads opens the offer from the game screen', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Classic'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Remove ads'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('No more ads between games'), findsOneWidget);
+    // The store is not set up in tests.
+    expect(find.text('Not available right now. Please try again later.'), findsOneWidget);
+    await tester.tap(find.text('Not now'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('No more ads between games'), findsNothing);
+  });
+
+  testWidgets('the remove ads button is hidden once ads are removed', (tester) async {
+    await pumpApp(tester, prefs: {'flutter.iap.removeAds': true});
+    await tester.tap(find.text('Classic'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Remove ads'), findsNothing);
+    expect(find.byTooltip('Pause'), findsOneWidget);
+  });
 }

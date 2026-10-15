@@ -19,6 +19,7 @@ import 'board_painter.dart';
 import 'level_map_screen.dart';
 import 'palette.dart';
 import 'piece_view.dart';
+import 'remove_ads.dart';
 import 'settings_sheet.dart';
 import 'theme.dart';
 import 'tips.dart';
@@ -739,12 +740,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
           Align(
             alignment: Alignment.topRight,
-            child: IconButton(
-              tooltip: 'Pause',
-              iconSize: 32,
-              color: Colors.white,
-              onPressed: _openMenu,
-              icon: const GameIcon('pause', size: 36),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RemoveAdsButton(app: widget.app),
+                IconButton(
+                  tooltip: 'Pause',
+                  iconSize: 32,
+                  color: Colors.white,
+                  onPressed: _openMenu,
+                  icon: const GameIcon('pause', size: 36),
+                ),
+              ],
             ),
           ),
           Align(alignment: Alignment.bottomCenter, child: _comboBadge()),
@@ -1208,22 +1215,27 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         children: [
           Row(
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  level.isDaily ? 'Daily Challenge' : 'Level ${level.number}',
-                  style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white),
+              Flexible(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    level.isDaily ? 'Daily Challenge' : 'Level ${level.number}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white),
+                  ),
                 ),
               ),
               const Spacer(),
+              RemoveAdsButton(app: widget.app),
               IconButton(
                 tooltip: 'Pause',
                 iconSize: 32,
