@@ -426,19 +426,7 @@ extension _EndViews on _GameScreenState {
       offset: Offset(0, i == 1 ? -10 : 0),
       child: Transform.scale(
         scale: lit ? appear : 1,
-        child: Icon(
-          Icons.star_rounded,
-          size: i == 1 ? 76 : 60,
-          color: lit ? kGold : Colors.white.withValues(alpha: 0.16),
-          shadows: lit
-              ? const [
-                  Shadow(
-                      color: Colors.black38,
-                      blurRadius: 8,
-                      offset: Offset(0, 3))
-                ]
-              : null,
-        ),
+        child: StarIcon(lit: lit, size: i == 1 ? 84 : 66),
       ),
     );
   }

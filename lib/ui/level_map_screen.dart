@@ -392,10 +392,7 @@ class _LevelMapScreenState extends State<LevelMapScreen>
                     child: Row(
                       children: [
                         for (var i = 0; i < 3; i++)
-                          i < stars
-                              ? const GameIcon('star', size: 20)
-                              : const Icon(Icons.star_rounded,
-                                  size: 20, color: Colors.white24),
+                          StarIcon(lit: i < stars, size: 20),
                       ],
                     ),
                   ),
@@ -504,10 +501,7 @@ Future<void> showLevelIntro(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   for (var i = 0; i < 3; i++)
-                    i < stars
-                        ? const GameIcon('star', size: 32)
-                        : const Icon(Icons.star_rounded,
-                            size: 32, color: Colors.white24),
+                    StarIcon(lit: i < stars, size: 34),
                 ],
               ),
             const SizedBox(height: 16),

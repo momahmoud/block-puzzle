@@ -84,6 +84,30 @@ class GameIcon extends StatelessWidget {
   }
 }
 
+/// A rating star: the gold star when [lit], a faded grey one when not.
+/// The star art is 256px, so it stays sharp even on the results screen.
+class StarIcon extends StatelessWidget {
+  const StarIcon({super.key, required this.lit, this.size = 24});
+
+  final bool lit;
+  final double size;
+
+  static const ColorFilter _grey = ColorFilter.matrix([
+    0.33, 0.33, 0.33, 0, 0, //
+    0.33, 0.33, 0.33, 0, 0, //
+    0.33, 0.33, 0.33, 0, 0, //
+    0, 0, 0, 1, 0,
+  ]);
+
+  @override
+  Widget build(BuildContext context) {
+    final star = GameIcon('star', size: size);
+    if (lit) return star;
+    return Opacity(
+        opacity: 0.35, child: ColorFiltered(colorFilter: _grey, child: star));
+  }
+}
+
 /// The gold crown shown next to best scores.
 class CrownIcon extends StatelessWidget {
   const CrownIcon({super.key, this.size = 24});
