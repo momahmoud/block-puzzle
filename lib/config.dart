@@ -18,6 +18,11 @@ abstract final class AppConfig {
       ? 'ca-app-pub-3940256099942544/1033173712'
       : 'ca-app-pub-3940256099942544/4411468910';
 
+  /// Adaptive banner at the bottom of the game screen.
+  static String get bannerAdUnit => Platform.isAndroid
+      ? 'ca-app-pub-3940256099942544/9214589741'
+      : 'ca-app-pub-3940256099942544/2435281174';
+
   /// Show an interstitial at most once per this many finished games.
   static const int interstitialEveryGames = 3;
 

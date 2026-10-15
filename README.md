@@ -82,10 +82,12 @@ dart run flutter_native_splash:create
 - **Second chances**: Classic and levels that run out of space can revive
   once (clears the two fullest rows and columns) by watching an ad; levels
   that run out of moves can get +5 moves once.
-- **Ads** (`lib/services/ads.dart`): Google's consent form (UMP) runs first;
-  then rewarded ads, plus an interstitial every 3 finished games
-  (`AppConfig.interstitialEveryGames`). Buying "Remove ads" turns off
-  interstitials; rewarded ads stay, since players choose them.
+- **Ads** (`lib/services/ads.dart`, `lib/ui/banner_slot.dart`): Google's
+  consent form (UMP) runs first; then rewarded ads, an interstitial every 3
+  finished games (`AppConfig.interstitialEveryGames`) and an anchored
+  adaptive banner along the bottom of the game screen (never covered by the
+  game-over overlay). Buying "Remove ads" turns off the interstitial and the
+  banner; rewarded ads stay, since players choose them.
 - **Daily challenge** (`lib/services/daily_challenge.dart`): one level per
   UTC day, the same for everyone; the move limit is tuned on the device by
   the level bot. Streak counter and a booster reward.
@@ -103,7 +105,7 @@ with its password in `android/key.properties` (git-ignored). **Back both up
 somewhere safe**: Play Console needs the same upload key for every update
 (it can be reset through Play support, but that takes days).
 
-1. **AdMob**: create the app and two ad units (rewarded, interstitial) at
+1. **AdMob**: create the app and three ad units (rewarded, interstitial, banner) at
    https://admob.google.com. Put the unit ids in `lib/config.dart` and the
    app id in `android/app/src/main/AndroidManifest.xml`
    (`com.google.android.gms.ads.APPLICATION_ID`) and `ios/Runner/Info.plist`

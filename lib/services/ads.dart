@@ -27,6 +27,10 @@ class Ads extends ChangeNotifier {
   @visibleForTesting
   Future<bool> Function()? debugRewardOverride;
 
+  /// True once consent allows ads and "Remove ads" was not bought: the
+  /// banner may be shown.
+  bool get bannerAllowed => _canRequest && !_purchases.adsRemoved;
+
   bool get rewardedReady => debugRewardOverride != null || _rewarded != null;
 
   /// True where the player must be able to change their consent later.

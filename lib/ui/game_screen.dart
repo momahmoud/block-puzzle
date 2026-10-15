@@ -19,6 +19,7 @@ import 'board_painter.dart';
 import 'level_map_screen.dart';
 import 'palette.dart';
 import 'piece_view.dart';
+import 'banner_slot.dart';
 import 'remove_ads.dart';
 import 'settings_sheet.dart';
 import 'theme.dart';
@@ -154,6 +155,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowTip());
   }
+
+  /// Built once so the banner is not reloaded on every frame.
+  late final Widget _banner = _BannerArea(app: widget.app);
 
   @override
   void dispose() {
@@ -631,10 +635,22 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 widget.app.ads,
               ],
             ),
-            builder: (context, _) => Stack(
+            builder: (context, _) => Column(
               children: [
-                SafeArea(child: LayoutBuilder(builder: _buildLayout)),
-                if (_showResults) Positioned.fill(child: _endOverlay(theme)),
+                // The end-of-game overlay stops above the banner: ads may
+                // not be covered.
+                Expanded(
+                  child: Stack(
+                    children: [
+                      SafeArea(
+                          bottom: false,
+                          child: LayoutBuilder(builder: _buildLayout)),
+                      if (_showResults)
+                        Positioned.fill(child: _endOverlay(theme)),
+                    ],
+                  ),
+                ),
+                _banner,
               ],
             ),
           ),
@@ -1416,6 +1432,25 @@ class _BoosterButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The banner when ads are allowed; otherwise just the bottom safe-area
+/// padding, which the game layout no longer adds itself.
+class _BannerArea extends StatelessWidget {
+  const _BannerArea({required this.app});
+
+  final AppServices app;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([app.ads, app.purchases]),
+      builder: (context, child) => app.ads.bannerAllowed
+          ? child!
+          : const SafeArea(top: false, child: SizedBox(width: double.infinity)),
+      child: BannerSlot(app: app),
     );
   }
 }
