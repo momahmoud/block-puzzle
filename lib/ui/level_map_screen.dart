@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 
 import '../game/game_controller.dart';
 import '../game/levels.dart';
+import '../services/app_services.dart';
 import '../services/level_progress.dart';
+import '../services/stats.dart';
 import '../services/settings.dart';
 import '../services/sfx.dart';
 import 'game_screen.dart';
@@ -14,20 +16,14 @@ import 'theme.dart';
 import 'widgets.dart';
 
 /// Opens level [number].
-Route<void> levelRoute({
-  required int number,
-  required Settings settings,
-  required Sfx sfx,
-  required LevelProgress levels,
-}) {
+Route<void> levelRoute(
+    {required int number, required AppServices app, LevelSpec? spec}) {
   return PageRouteBuilder<void>(
     transitionDuration: const Duration(milliseconds: 380),
     reverseTransitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (context, _, __) => GameScreen(
-      controller: GameController(level: LevelSpec.forNumber(number)),
-      settings: settings,
-      sfx: sfx,
-      levels: levels,
+      controller: GameController(level: spec ?? LevelSpec.forNumber(number)),
+      app: app,
     ),
     transitionsBuilder: (context, anim, _, child) {
       final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
@@ -89,14 +85,15 @@ class _GemIconPainter extends CustomPainter {
 class LevelMapScreen extends StatefulWidget {
   const LevelMapScreen({
     super.key,
-    required this.levels,
-    required this.settings,
-    required this.sfx,
+    required this.app,
   });
 
-  final LevelProgress levels;
-  final Settings settings;
-  final Sfx sfx;
+  final AppServices app;
+
+  Settings get settings => app.settings;
+  Sfx get sfx => app.sfx;
+  LevelProgress get levels => app.levels;
+  Stats get stats => app.stats;
 
   @override
   State<LevelMapScreen> createState() => _LevelMapScreenState();
@@ -139,11 +136,7 @@ class _LevelMapScreenState extends State<LevelMapScreen>
       level: LevelSpec.forNumber(n),
       stars: widget.levels.starsFor(n),
       onPlay: () => Navigator.of(context).push(
-        levelRoute(
-            number: n,
-            settings: widget.settings,
-            sfx: widget.sfx,
-            levels: widget.levels),
+        levelRoute(number: n, app: widget.app),
       ),
     );
   }
@@ -497,7 +490,9 @@ Future<void> showLevelIntro(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${level.chapterName.toUpperCase()} · CHAPTER ${level.chapter + 1}',
+              level.isDaily
+                  ? 'SAME LEVEL FOR EVERYONE TODAY'
+                  : '${level.chapterName.toUpperCase()} · CHAPTER ${level.chapter + 1}',
               style: const TextStyle(
                   fontSize: 11,
                   letterSpacing: 1.5,
@@ -505,7 +500,9 @@ Future<void> showLevelIntro(
                   color: Colors.white60),
             ),
             const SizedBox(height: 4),
-            OutlinedText('Level ${level.number}', size: 34),
+            OutlinedText(
+                level.isDaily ? 'Daily Challenge' : 'Level ${level.number}',
+                size: level.isDaily ? 30 : 34),
             if (level.isHard)
               Container(
                 margin: const EdgeInsets.only(top: 6),
@@ -530,14 +527,15 @@ Future<void> showLevelIntro(
                 ),
               ),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 0; i < 3; i++)
-                  Icon(Icons.star_rounded,
-                      size: 30, color: i < stars ? kGold : Colors.white24),
-              ],
-            ),
+            if (!level.isDaily)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < 3; i++)
+                    Icon(Icons.star_rounded,
+                        size: 30, color: i < stars ? kGold : Colors.white24),
+                ],
+              ),
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,

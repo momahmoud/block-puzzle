@@ -8,7 +8,7 @@ import 'package:block_puzzle/game/levels.dart';
 import 'package:block_puzzle/game/piece.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/level_bot.dart';
+import 'package:block_puzzle/game/level_bot.dart';
 
 void main() {
   test('every level starts without a full line and with gems on blocks', () {

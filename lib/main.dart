@@ -5,10 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/game_controller.dart';
-import 'services/level_progress.dart';
-import 'services/settings.dart';
-import 'services/sfx.dart';
-import 'services/stats.dart';
+import 'services/app_services.dart';
 import 'ui/home_screen.dart';
 import 'ui/theme.dart';
 
@@ -21,11 +18,7 @@ Future<void> main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   final prefs = await SharedPreferences.getInstance();
-  final settings = Settings(prefs);
-  final stats = Stats(prefs);
-  final levels = LevelProgress(prefs);
-  final sfx = Sfx(settings);
-  sfx.init(); // loads in the background; sounds start working once ready
+  final app = AppServices(prefs);
 
   final controller = GameController(best: prefs.getInt(_bestKey) ?? 0);
   final saved = prefs.getString(_gameKey);
@@ -44,34 +37,25 @@ Future<void> main() async {
       prefs.setString(_gameKey, jsonEncode(controller.toJson()));
     }
     ..onMove = (move) {
-      stats.recordMove(lines: move.lines, combo: move.combo);
+      app.stats.recordMove(lines: move.lines, combo: move.combo);
+      app.afterMove(controller, move);
     }
-    ..onGameEnd = stats.recordGameEnd;
+    ..onGameEnd = () {
+      app.stats.recordGameEnd();
+      app.games.submitClassicScore(controller.best);
+    };
 
-  runApp(BlockPuzzleApp(
-    controller: controller,
-    settings: settings,
-    stats: stats,
-    levels: levels,
-    sfx: sfx,
-  ));
+  runApp(BlockPuzzleApp(controller: controller, app: app));
+  // Sound, ads, purchases and sign-in start after the first frame.
+  app.start();
 }
 
 class BlockPuzzleApp extends StatelessWidget {
-  const BlockPuzzleApp({
-    super.key,
-    required this.controller,
-    required this.settings,
-    required this.stats,
-    required this.levels,
-    required this.sfx,
-  });
+  const BlockPuzzleApp(
+      {super.key, required this.controller, required this.app});
 
   final GameController controller;
-  final Settings settings;
-  final Stats stats;
-  final LevelProgress levels;
-  final Sfx sfx;
+  final AppServices app;
 
   @override
   Widget build(BuildContext context) {
@@ -81,22 +65,17 @@ class BlockPuzzleApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         useMaterial3: true,
+        fontFamily: 'Fredoka',
         colorSchemeSeed: const Color(0xFF7B4DFF),
       ),
       builder: (context, child) => ListenableBuilder(
-        listenable: settings,
+        listenable: app.settings,
         builder: (context, _) => ThemeScope(
-          theme: GameTheme.byId(settings.themeId),
+          theme: GameTheme.byId(app.settings.themeId),
           child: child!,
         ),
       ),
-      home: HomeScreen(
-        controller: controller,
-        settings: settings,
-        stats: stats,
-        levels: levels,
-        sfx: sfx,
-      ),
+      home: HomeScreen(controller: controller, app: app),
     );
   }
 }

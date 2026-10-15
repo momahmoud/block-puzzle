@@ -18,7 +18,7 @@ import 'dart:math' as math;
 import 'package:block_puzzle/game/levels.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../test/support/level_bot.dart';
+import 'package:block_puzzle/game/level_bot.dart';
 
 const int _seeds = 24;
 const List<int> _scalesUp = [100, 125, 150, 180, 220, 270, 330];

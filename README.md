@@ -73,15 +73,56 @@ dart run flutter_launcher_icons
 dart run flutter_native_splash:create
 ```
 
+## Monetisation, boosters and daily challenge
+
+- **Boosters** (`lib/services/boosters.dart`): bomb (clears 3x3, collects
+  gems, smashes ice), rotate (turns a tray piece) and undo. Players start with
+  2 of each; an empty booster can be refilled with a rewarded ad, and the
+  daily challenge gives one.
+- **Second chances**: Classic and levels that run out of space can revive
+  once (clears the two fullest rows and columns) by watching an ad; levels
+  that run out of moves can get +5 moves once.
+- **Ads** (`lib/services/ads.dart`): Google's consent form (UMP) runs first;
+  then rewarded ads, plus an interstitial every 3 finished games
+  (`AppConfig.interstitialEveryGames`). Buying "Remove ads" turns off
+  interstitials; rewarded ads stay, since players choose them.
+- **Daily challenge** (`lib/services/daily_challenge.dart`): one level per
+  UTC day, the same for everyone; the move limit is tuned on the device by
+  the level bot. Streak counter and a booster reward.
+- **Leaderboards and achievements** (`lib/services/game_services.dart`):
+  Classic best and total level stars, plus 12 achievements. Off until
+  configured (below).
+
+All ids live in `lib/config.dart`.
+
 ## Before releasing
 
-1. **App ID.** Replace the placeholder `com.example...`:
-   - Android: `namespace` and `applicationId` in `android/app/build.gradle.kts`
-     (and move `MainActivity.kt` to the matching package folder).
-   - iOS: Bundle Identifier in Xcode (Runner target → General).
-2. **Android signing.** Create an upload key and `android/key.properties`
-   (see the comment in `android/app/build.gradle.kts`), then
-   `flutter build appbundle`.
-3. **iOS signing.** Open `ios/Runner.xcworkspace`, choose your team under
-   Signing & Capabilities, then `flutter build ipa`.
-4. Bump `version:` in `pubspec.yaml` for each store upload.
+Already done: app id `com.fluxylabs.blockPuzzle` (Android and iOS), and an
+Android upload key. The key is at `~/keystores/fluxylabs-block-puzzle-upload.jks`
+with its password in `android/key.properties` (git-ignored). **Back both up
+somewhere safe**: Play Console needs the same upload key for every update
+(it can be reset through Play support, but that takes days).
+
+1. **AdMob**: create the app and two ad units (rewarded, interstitial) at
+   https://admob.google.com. Put the unit ids in `lib/config.dart` and the
+   app id in `android/app/src/main/AndroidManifest.xml`
+   (`com.google.android.gms.ads.APPLICATION_ID`) and `ios/Runner/Info.plist`
+   (`GADApplicationIdentifier`). The current ones are Google's test ids.
+   Also set up the GDPR and IDFA messages under Privacy & messaging.
+2. **Remove ads**: in Play Console > Monetize > In-app products, create a
+   one-time product with id `remove_ads`.
+3. **Play Games Services**: in Play Console > Play Games Services, create the
+   project, add credentials (the upload key's SHA-1, and later the Play app
+   signing key's SHA-1), create the 2 leaderboards and 12 achievements (see
+   `Award` in `lib/services/game_services.dart`). Replace
+   `android/app/src/main/res/values/games-ids.xml` with the generated one,
+   fill the Android ids in `lib/config.dart` and `Award`, and set
+   `AppConfig.gameServicesEnabled = true`.
+4. **Store listing**: privacy policy
+   https://momahmoud.github.io/Fluxy-Labs/privacy-policy.html (also linked in
+   Settings). Declare in the Data safety form that the app uses AdMob
+   (advertising ID, diagnostics) and in-app purchases. Content rating: the
+   game itself has no violence; ads mean "Contains ads" must be ticked.
+5. Build: `flutter build appbundle` and upload
+   `build/app/outputs/bundle/release/app-release.aab`.
+6. Bump `version:` in `pubspec.yaml` for each upload.

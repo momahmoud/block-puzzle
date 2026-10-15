@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:block_puzzle/game/dealer.dart';
 import 'package:block_puzzle/game/game_controller.dart';
 import 'package:block_puzzle/game/grid.dart';
+import 'package:block_puzzle/game/levels.dart';
 import 'package:block_puzzle/game/piece.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -312,6 +313,94 @@ void main() {
       expect(result.lines, 2);
       expect(g.cells[2][5], 1);
       expect(result.iceBroken, [2 * 8 + 5]);
+    });
+  });
+
+  group('Boosters', () {
+    test('undo takes back a placement and its clear', () {
+      final game = GameController(random: math.Random(1));
+      for (var c = 0; c < 7; c++) {
+        game.grid.cells[0][c] = 1;
+      }
+      game.grid.cells[7][7] = 1;
+      game.tray = [line(1), line(1), line(1)];
+      final before = game.grid.toBits();
+      game.place(0, 0, 7);
+      expect(game.score, greaterThan(0));
+      expect(game.canUndo, isTrue);
+      expect(game.undo(), isTrue);
+      expect(game.grid.toBits(), before);
+      expect(game.score, 0);
+      expect(game.tray[0], isNotNull);
+      expect(game.canUndo, isFalse);
+    });
+
+    test('a bomb clears the 3x3 around a square and collects gems', () {
+      final level = LevelSpec(
+        number: 1,
+        cells: [
+          for (var r = 0; r < 8; r++)
+            [for (var c = 0; c < 8; c++) r < 3 && c < 3 ? 2 : 0],
+        ],
+        gems: const {9},
+        ice: const {0},
+        goals: const [LevelGoal(GoalType.gems, 1)],
+        moves: 10,
+      );
+      final game = GameController(random: math.Random(1), level: level);
+      final removed = game.bomb(1, 1);
+      expect(removed.length, 9);
+      expect(game.grid.isEmpty, isTrue);
+      expect(game.gemsCollected, 1);
+      expect(game.won, isTrue);
+      expect(game.movesLeft, 10);
+    });
+
+    test('rotate turns a tray piece', () {
+      final game = GameController(random: math.Random(1));
+      game.tray = [line(3), null, null];
+      game.rotate(0);
+      expect(game.tray[0]!.rows, 3);
+      expect(game.tray[0]!.cols, 1);
+    });
+
+    test('revive clears space once, after running out of space', () {
+      var ended = 0;
+      final game = GameController(random: math.Random(1))
+        ..onGameEnd = () => ended++;
+      for (var r = 0; r < Grid.size; r++) {
+        for (var c = 0; c < Grid.size; c++) {
+          game.grid.cells[r][c] = (r + c).isEven ? 1 : 0;
+        }
+      }
+      game.tray = [line(1), line(2), line(2)];
+      game.place(0, 0, 1);
+      expect(game.canRevive, isTrue);
+      expect(ended, 1);
+      expect(game.revive(), isTrue);
+      expect(game.gameOver, isFalse);
+      expect(game.canRevive, isFalse);
+      expect(ended, 1);
+    });
+
+    test('extra moves after running out of moves, once', () {
+      final level = LevelSpec(
+        number: 1,
+        cells: List.generate(8, (_) => List.filled(8, 0)),
+        gems: const {},
+        goals: const [LevelGoal(GoalType.lines, 5)],
+        moves: 1,
+      );
+      final game = GameController(random: math.Random(1), level: level);
+      game.tray = [line(1), line(1), line(1)];
+      game.place(0, 0, 0);
+      expect(game.endReason, EndReason.outOfMoves);
+      expect(game.addMoves(), isTrue);
+      expect(game.movesLeft, GameController.extraMoves);
+      expect(game.gameOver, isFalse);
+      game.movesLeft = 1;
+      game.place(1, 3, 3);
+      expect(game.canAddMoves, isFalse);
     });
   });
 }

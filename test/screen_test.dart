@@ -4,9 +4,10 @@ import 'package:block_puzzle/game/game_controller.dart';
 import 'package:block_puzzle/game/grid.dart';
 import 'package:block_puzzle/game/piece.dart';
 import 'package:block_puzzle/main.dart';
+import 'package:block_puzzle/services/app_services.dart';
+import 'package:block_puzzle/services/boosters.dart';
 import 'package:block_puzzle/services/level_progress.dart';
 import 'package:block_puzzle/services/settings.dart';
-import 'package:block_puzzle/services/sfx.dart';
 import 'package:block_puzzle/services/stats.dart';
 import 'package:block_puzzle/ui/board_painter.dart';
 import 'package:block_puzzle/ui/game_screen.dart';
@@ -17,41 +18,49 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Piece line(int n) => Piece([for (var i = 0; i < n; i++) Cell(0, i)], 2);
 
-Future<
-    ({
-      GameController game,
-      Settings settings,
-      Stats stats,
-      LevelProgress levels
-    })> pumpApp(
+typedef TestApp = ({
+  GameController game,
+  Settings settings,
+  Stats stats,
+  LevelProgress levels,
+  AppServices services,
+});
+
+Future<TestApp> pumpApp(
   WidgetTester tester, {
   bool tutorialDone = true,
+  Size size = const Size(1170, 2532),
+  double pixelRatio = 3,
+  Map<String, Object> prefs = const {},
 }) async {
-  tester.view.physicalSize = const Size(1170, 2532);
-  tester.view.devicePixelRatio = 3;
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = pixelRatio;
   addTearDown(tester.view.reset);
 
-  SharedPreferences.setMockInitialValues(
-      {'flutter.tutorialDone': tutorialDone});
-  final prefs = await SharedPreferences.getInstance();
-  final settings = Settings(prefs);
-  final stats = Stats(prefs);
-  final levels = LevelProgress(prefs);
+  SharedPreferences.setMockInitialValues({
+    'flutter.tutorialDone': tutorialDone,
+    // Tips would pop up over the first gem and ice levels.
+    'flutter.tip.ice': true,
+    'flutter.tip.gems': true,
+    ...prefs,
+  });
+  final services = AppServices(await SharedPreferences.getInstance());
+  // Rewarded ads always pay out in tests.
+  services.ads.debugRewardOverride = () async => true;
   final game = GameController(random: math.Random(1))
-    ..onMove = ((m) => stats.recordMove(lines: m.lines, combo: m.combo))
-    ..onGameEnd = stats.recordGameEnd;
-  await tester.pumpWidget(
-    BlockPuzzleApp(
-      controller: game,
-      settings: settings,
-      stats: stats,
-      levels: levels,
-      sfx: Sfx(settings),
-    ),
-  );
+    ..onMove =
+        ((m) => services.stats.recordMove(lines: m.lines, combo: m.combo))
+    ..onGameEnd = services.stats.recordGameEnd;
+  await tester.pumpWidget(BlockPuzzleApp(controller: game, app: services));
   // The home screen animates forever, so pump a fixed time instead of settling.
   await tester.pump(const Duration(seconds: 1));
-  return (game: game, settings: settings, stats: stats, levels: levels);
+  return (
+    game: game,
+    settings: services.settings,
+    stats: services.stats,
+    levels: services.levels,
+    services: services,
+  );
 }
 
 /// Opens the app and starts Classic.
@@ -325,5 +334,91 @@ void main() {
     await tester.pump();
     expect(game.gameOver, isFalse);
     expect(game.movesLeft, game.level!.moves);
+  });
+
+  testWidgets('the home screen fits a small phone', (tester) async {
+    // iPhone SE: 375 x 667 points.
+    await pumpApp(tester, size: const Size(750, 1334), pixelRatio: 2);
+    expect(tester.takeException(), isNull);
+    expect(find.text('Daily Challenge'), findsOneWidget);
+  });
+
+  testWidgets('bomb booster clears a 3x3 area', (tester) async {
+    final app = await pumpApp(tester);
+    await tester.tap(find.text('Classic'));
+    await tester.pumpAndSettle();
+    final game = app.game;
+    for (var r = 2; r <= 4; r++) {
+      for (var c = 2; c <= 4; c++) {
+        game.grid.cells[r][c] = 3;
+      }
+    }
+    game.notifyListeners();
+    await tester.pump();
+
+    await tester.tap(find.bySemanticsLabel('Bomb, 2 left'));
+    await tester.pump();
+    expect(find.text('Tap the board to drop the bomb'), findsOneWidget);
+    final board = tester.getRect(
+      find.byWidgetPredicate(
+          (w) => w is CustomPaint && w.painter is BoardPainter),
+    );
+    final cell = board.width / Grid.size;
+    await tester.tapAt(board.topLeft + Offset(3.5 * cell, 3.5 * cell));
+    await tester.pump();
+    expect(game.grid.isEmpty, isTrue);
+    expect(app.services.boosters.count(Booster.bomb), 1);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('an empty booster can be refilled by watching an ad',
+      (tester) async {
+    final app = await pumpApp(tester, prefs: {'flutter.boosters.rotate': 0});
+    await tester.tap(find.text('Classic'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Rotate, watch an ad to get one'));
+    await tester.pumpAndSettle();
+    expect(app.services.boosters.count(Booster.rotate), 1);
+  });
+
+  testWidgets('classic game over offers a revive', (tester) async {
+    final app = await pumpApp(tester);
+    await tester.tap(find.text('Classic'));
+    await tester.pumpAndSettle();
+    final game = app.game;
+    for (var r = 0; r < Grid.size; r++) {
+      for (var c = 0; c < Grid.size; c++) {
+        game.grid.cells[r][c] = (r + c).isEven ? 1 : 0;
+      }
+    }
+    game.tray = [line(1), line(2), line(2)];
+    game.place(0, 0, 1);
+    expect(game.gameOver, isTrue);
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Revive'), findsOneWidget);
+    await tester.tap(find.text('Revive'));
+    await tester.pumpAndSettle();
+    expect(game.gameOver, isFalse);
+    expect(game.revived, isTrue);
+    expect(find.text('Play Again'), findsNothing);
+  });
+
+  testWidgets('the daily challenge opens from home', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Daily Challenge'));
+    // The move limit is worked out in an isolate.
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(seconds: 3)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('SAME LEVEL FOR EVERYONE TODAY'), findsOneWidget);
+    await tester.tap(find.text('Play'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    final game = tester.widget<GameScreen>(find.byType(GameScreen)).controller;
+    expect(game.level!.isDaily, isTrue);
+    expect(find.text('Daily Challenge'), findsOneWidget);
   });
 }

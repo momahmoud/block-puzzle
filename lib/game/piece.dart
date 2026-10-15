@@ -34,6 +34,9 @@ class Piece {
   /// Number of squares in the piece.
   int get size => cells.length;
 
+  /// The same piece turned a quarter turn clockwise.
+  Piece rotated() => Piece(_rotate(cells), colorId);
+
   Map<String, Object> toJson() => {
         'cells': [
           for (final c in cells) ...[c.row, c.col]

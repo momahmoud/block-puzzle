@@ -114,6 +114,76 @@ def make_sounds():
     _write("best", _mix(*parts), 0.7)
 
 
+# ---------------------------------------------------------------- music
+
+def make_music():
+    """A calm 40 second loop: soft pads, a plucked arpeggio and a bass line
+    over I-vi-IV-V in C. The tail wraps round to the start so it loops
+    without a click."""
+    rate = 22050
+    bpm = 96
+    beat = 60 / bpm
+    bars = 16
+    length = int(rate * beat * 4 * bars)
+    out = np.zeros(length)
+    t_all = np.arange(length) / rate
+
+    def note(freq, start, dur, kind, gain):
+        n = int(dur * rate)
+        t = np.arange(n) / rate
+        if kind == "pad":
+            env = np.minimum(1, t / 0.6) * np.minimum(1, (dur - t) / 0.8).clip(0)
+            wave_ = np.sin(2 * math.pi * freq * t) + 0.3 * np.sin(2 * math.pi * freq * 2 * t)
+            wave_ *= 1 + 0.15 * np.sin(2 * math.pi * 0.5 * t)
+        elif kind == "pluck":
+            env = np.exp(-t * 5) * np.minimum(1, t / 0.004)
+            wave_ = np.sin(2 * math.pi * freq * t) + 0.35 * np.sin(2 * math.pi * freq * 3 * t) * np.exp(-t * 8)
+        else:  # bass
+            env = np.exp(-t * 2.5) * np.minimum(1, t / 0.01)
+            wave_ = np.sin(2 * math.pi * freq * t)
+        i = int(start * rate)
+        seg = wave_ * env * gain
+        end = i + n
+        if end <= length:
+            out[i:end] += seg
+        else:
+            cut = length - i
+            out[i:] += seg[:cut]
+            out[: n - cut] += seg[cut:]
+
+    def hz(semitones_from_a4):
+        return 440 * 2 ** (semitones_from_a4 / 12)
+
+    # Chords as semitones from A4: C, Am, F, G.
+    chords = [
+        [-9, -5, -2],   # C E G
+        [-12, -9, -5],  # A C E
+        [-16, -12, -9], # F A C
+        [-14, -10, -7], # G B D
+    ]
+    roots = [-21, -24, -28, -26]
+    arp = [0, 1, 2, 1, 0, 2, 1, 2]
+    for bar in range(bars):
+        c = bar % 4
+        start = bar * 4 * beat
+        for s in chords[c]:
+            note(hz(s), start, 4 * beat + 0.4, "pad", 0.10)
+        note(hz(roots[c]), start, 2 * beat, "bass", 0.30)
+        note(hz(roots[c]), start + 2 * beat, 2 * beat, "bass", 0.22)
+        if bar >= 2:  # let the pads breathe first
+            for k in range(8):
+                s = chords[c][arp[k]] + 12
+                note(hz(s), start + k * beat / 2, beat, "pluck", 0.13)
+
+    out /= np.max(np.abs(out)) or 1
+    data = (out * 0.7 * 32767).astype(np.int16)
+    with wave.open(os.path.join(SOUNDS, "music.wav"), "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(rate)
+        f.writeframes(data.tobytes())
+
+
 # ---------------------------------------------------------------- icon
 
 # Neon Night theme colours (lib/ui/theme.dart).
@@ -196,5 +266,6 @@ def make_icons():
 
 if __name__ == "__main__":
     make_sounds()
+    make_music()
     make_icons()
     print("done")

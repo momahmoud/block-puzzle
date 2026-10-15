@@ -109,6 +109,12 @@ class Sfx {
 
   void ice() => _play('ice', volume: 0.8);
 
+  void bomb() {
+    _play('clear_3');
+    _play('ice', volume: 0.6);
+    if (settings.haptics) HapticFeedback.heavyImpact();
+  }
+
   void tap() {
     if (settings.haptics) HapticFeedback.selectionClick();
   }

@@ -25,6 +25,7 @@ class LevelSpec {
     required this.goals,
     required this.moves,
     this.ice = const {},
+    this.dailyDay,
   });
 
   static const int perChapter = 20;
@@ -59,6 +60,10 @@ class LevelSpec {
 
   final List<LevelGoal> goals;
   final int moves;
+
+  /// Set on a daily challenge: the day it belongs to (see DailyChallenge).
+  final int? dailyDay;
+  bool get isDaily => dailyDay != null;
 
   /// 0-based chapter index.
   int get chapter => (number - 1) ~/ perChapter;
@@ -101,6 +106,34 @@ class LevelSpec {
     }
     return LevelSpec.generate(n);
   }
+
+  /// The daily challenge for [day]: the same for every player that day.
+  /// Picks a mid-to-late difficulty and a layout variant no regular level
+  /// uses. [moves] comes from the bot (see DailyChallenge).
+  factory LevelSpec.daily(int day, {int? moves}) {
+    final n = 40 + (day * 37) % 140;
+    final base = LevelSpec.generate(n, variant: 10 + day % 1000);
+    return LevelSpec(
+      number: n,
+      cells: base.cells,
+      gems: base.gems,
+      ice: base.ice,
+      goals: base.goals,
+      moves: moves ?? base.moves,
+      dailyDay: day,
+    );
+  }
+
+  /// A copy with a different move limit.
+  LevelSpec withMoves(int moves) => LevelSpec(
+        number: number,
+        cells: cells,
+        gems: gems,
+        ice: ice,
+        goals: goals,
+        moves: moves,
+        dailyDay: dailyDay,
+      );
 
   /// Builds level [n] (1-based). The same arguments always give the same
   /// level. [variant] picks a different layout, [targetScale] shrinks the

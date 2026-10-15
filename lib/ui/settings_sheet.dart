@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
-import '../services/settings.dart';
-import '../services/sfx.dart';
+import '../services/app_services.dart';
 import 'theme.dart';
 import 'theme_picker.dart';
 import 'widgets.dart';
@@ -12,12 +11,14 @@ import 'widgets.dart';
 /// Resume, Restart and Home.
 Future<void> showSettingsSheet(
   BuildContext context, {
-  required Settings settings,
-  required Sfx sfx,
+  required AppServices app,
   VoidCallback? onRestart,
   VoidCallback? onHome,
 }) {
   final inGame = onRestart != null || onHome != null;
+  final settings = app.settings;
+  final sfx = app.sfx;
+  final purchases = app.purchases;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -27,7 +28,7 @@ Future<void> showSettingsSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
     builder: (context) => ListenableBuilder(
-      listenable: settings,
+      listenable: Listenable.merge([settings, purchases]),
       builder: (context, _) {
         final theme = GameTheme.of(context);
         return SafeArea(
@@ -58,6 +59,13 @@ Future<void> showSettingsSheet(
                     onChanged: (v) => settings.sound = v,
                   ),
                   _SwitchRow(
+                    icon: Icons.music_note_rounded,
+                    label: 'Music',
+                    value: settings.music,
+                    accent: theme.accent,
+                    onChanged: (v) => settings.music = v,
+                  ),
+                  _SwitchRow(
                     icon: Icons.vibration_rounded,
                     label: 'Vibration',
                     value: settings.haptics,
@@ -83,6 +91,59 @@ Future<void> showSettingsSheet(
                     label: 'How to play',
                     onTap: () => showHowToPlay(context),
                   ),
+                  if (!purchases.adsRemoved && purchases.available)
+                    _Row(
+                      icon: Icons.block_rounded,
+                      label: 'Remove ads',
+                      trailing: purchases.busy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              purchases.price ?? '',
+                              style: TextStyle(
+                                  color: theme.accent,
+                                  fontWeight: FontWeight.w900),
+                            ),
+                      onTap: purchases.buyRemoveAds,
+                    ),
+                  if (purchases.adsRemoved)
+                    const _Row(
+                      icon: Icons.verified_rounded,
+                      label: 'Ads removed. Thank you!',
+                      trailing: SizedBox.shrink(),
+                      onTap: null,
+                    ),
+                  _Row(
+                    icon: Icons.restore_rounded,
+                    label: 'Restore purchases',
+                    onTap: () async {
+                      await purchases.restore();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+                        content: Text(purchases.error ??
+                            (purchases.adsRemoved
+                                ? 'Ads are removed.'
+                                : 'No purchases to restore.')),
+                      ));
+                    },
+                  ),
+                  if (purchases.error != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
+                      child: Text(purchases.error!,
+                          style: const TextStyle(color: Color(0xFFFF8A8A))),
+                    ),
+                  if (app.ads.privacyOptionsRequired)
+                    _Row(
+                      icon: Icons.manage_accounts_rounded,
+                      label: 'Ad privacy choices',
+                      onTap: app.ads.showPrivacyOptions,
+                    ),
                   _Row(
                     icon: Icons.privacy_tip_outlined,
                     label: 'Privacy policy',
@@ -183,7 +244,7 @@ class _Row extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Widget? trailing;
 
   @override

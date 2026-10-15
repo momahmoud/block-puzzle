@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:block_puzzle/game/game_controller.dart';
-import 'package:block_puzzle/game/grid.dart';
-import 'package:block_puzzle/game/levels.dart';
+import 'game_controller.dart';
+import 'grid.dart';
+import 'levels.dart';
 
 final List<int> _lineMasks = [
   for (var r = 0; r < 8; r++) 0xFF << (r * 8),
@@ -29,14 +29,7 @@ int _mask(Iterable<int> squares) => squares.fold(0, (m, i) => m | 1 << i);
 /// Returns how many moves it took to win, or null if it got stuck or ran
 /// past [cap] moves.
 int? botMovesToWin(LevelSpec level, int seed, {int cap = 120}) {
-  final open = LevelSpec(
-    number: level.number,
-    cells: level.cells,
-    gems: level.gems,
-    ice: level.ice,
-    goals: level.goals,
-    moves: cap,
-  );
+  final open = level.withMoves(cap);
   final game = GameController(random: math.Random(seed), level: open);
   while (!game.gameOver) {
     final board = game.grid.toBits();
@@ -94,4 +87,16 @@ int? botMovesToWin(LevelSpec level, int seed, {int cap = 120}) {
     game.place(choice.$1, choice.$2, choice.$3);
   }
   return game.won ? cap - game.movesLeft : null;
+}
+
+/// A move limit for [level] such that the bot wins about [winRate] of
+/// [seeds] games, or null if it wins too rarely to tell.
+int? calibrateMoves(LevelSpec level, {int seeds = 16, double winRate = 0.7}) {
+  final wins = [for (var s = 0; s < seeds; s++) botMovesToWin(level, s)]
+      .whereType<int>()
+      .toList()
+    ..sort();
+  final need = (winRate * seeds).ceil();
+  if (wins.length < need) return null;
+  return math.max(5, wins[need - 1]);
 }

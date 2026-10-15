@@ -141,7 +141,11 @@ class GameController extends ChangeNotifier {
   bool get hasProgress => !gameOver && (score > 0 || !grid.isEmpty);
 
   void newGame() {
-    if (hasProgress) onGameEnd?.call();
+    if (hasProgress && !_endReported) onGameEnd?.call();
+    _endReported = false;
+    _undo = null;
+    revived = false;
+    extraMovesUsed = false;
     grid = Grid();
     final lv = level;
     if (lv != null) {
@@ -171,6 +175,159 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------------------------------------------------------- boosters
+
+  /// Revive and extra moves can each be used once per game.
+  bool revived = false;
+  bool extraMovesUsed = false;
+  bool _endReported = false;
+  _Snapshot? _undo;
+
+  static const int extraMoves = 5;
+
+  bool get canUndo => _undo != null;
+  bool get canRevive => gameOver && endReason == EndReason.noSpace && !revived;
+  bool get canAddMoves =>
+      gameOver && endReason == EndReason.outOfMoves && !extraMovesUsed;
+
+  /// Takes back the last placement, even one that ended the game.
+  bool undo() {
+    final snap = _undo;
+    if (snap == null) return false;
+    _undo = null;
+    snap.restoreInto(this);
+    endReason = EndReason.none;
+    gameOver = false;
+    lastMove = null;
+    lastClear = ClearResult.none;
+    dealCount++;
+    onSave?.call();
+    notifyListeners();
+    return true;
+  }
+
+  /// Squares a bomb dropped at ([row], [col]) would hit: the 3x3 around it.
+  static List<int> bombArea(int row, int col) => [
+        for (var r = row - 1; r <= row + 1; r++)
+          for (var c = col - 1; c <= col + 1; c++)
+            if (r >= 0 && r < Grid.size && c >= 0 && c < Grid.size)
+              r * Grid.size + c,
+      ];
+
+  /// Blows up the 3x3 around ([row], [col]). Frozen blocks go too, and gems
+  /// in the blast are collected. Does not use a move. Returns the squares
+  /// that held a block, with their colours.
+  List<ClearedCell> bomb(int row, int col) {
+    if (gameOver && endReason == EndReason.won) return const [];
+    final removed = <ClearedCell>[];
+    var gemsHit = 0;
+    for (final i in bombArea(row, col)) {
+      final r = i ~/ Grid.size, c = i % Grid.size;
+      if (grid.cells[r][c] == 0) continue;
+      removed.add((row: r, col: c, colorId: grid.cells[r][c]));
+      grid.cells[r][c] = 0;
+      if (grid.ice.remove(i)) iceBroken++;
+      if (gems.remove(i)) gemsHit++;
+    }
+    gemsCollected += gemsHit;
+    score += removed.length;
+    _undo = null;
+    _settleAfterBooster();
+    return removed;
+  }
+
+  /// Turns tray piece [index] a quarter turn.
+  bool rotate(int index) {
+    final piece = index >= 0 && index < tray.length ? tray[index] : null;
+    if (piece == null || (gameOver && endReason == EndReason.won)) return false;
+    tray[index] = piece.rotated();
+    _settleAfterBooster();
+    return true;
+  }
+
+  /// A second chance after running out of space: clears the two fullest
+  /// rows and the two fullest columns and deals fresh pieces.
+  bool revive() {
+    if (!canRevive) return false;
+    revived = true;
+    int filled(Iterable<int> squares) => squares
+        .where((i) => grid.cells[i ~/ Grid.size][i % Grid.size] != 0)
+        .length;
+    final rows = List.generate(Grid.size, (r) => r)
+      ..sort((a, b) =>
+          filled(List.generate(Grid.size, (c) => b * Grid.size + c)).compareTo(
+              filled(List.generate(Grid.size, (c) => a * Grid.size + c))));
+    final cols = List.generate(Grid.size, (c) => c)
+      ..sort((a, b) =>
+          filled(List.generate(Grid.size, (r) => r * Grid.size + b)).compareTo(
+              filled(List.generate(Grid.size, (r) => r * Grid.size + a))));
+    for (final r in rows.take(2)) {
+      for (var c = 0; c < Grid.size; c++) {
+        _wipe(r, c);
+      }
+    }
+    for (final c in cols.take(2)) {
+      for (var r = 0; r < Grid.size; r++) {
+        _wipe(r, c);
+      }
+    }
+    _undo = null;
+    _refillTray();
+    _settleAfterBooster();
+    return true;
+  }
+
+  /// Levels: [extraMoves] more moves after running out.
+  bool addMoves() {
+    if (!canAddMoves) return false;
+    extraMovesUsed = true;
+    movesLeft += extraMoves;
+    _settleAfterBooster();
+    return true;
+  }
+
+  void _wipe(int r, int c) {
+    final i = r * Grid.size + c;
+    if (grid.cells[r][c] == 0) return;
+    grid.cells[r][c] = 0;
+    if (grid.ice.remove(i)) iceBroken++;
+    if (gems.remove(i)) gemsCollected++;
+  }
+
+  /// Re-checks win and game over after a booster changed the board.
+  void _settleAfterBooster() {
+    endReason = EndReason.none;
+    _evaluateEnd();
+    if (score > best) {
+      best = score;
+      onNewBest?.call(best);
+    }
+    onSave?.call();
+    notifyListeners();
+  }
+
+  void _evaluateEnd() {
+    final stuck = !tray.any((p) => p != null && grid.canFitAnywhere(p));
+    if (isLevel) {
+      if (goalsMet) {
+        endReason = EndReason.won;
+      } else if (movesLeft <= 0) {
+        endReason = EndReason.outOfMoves;
+      } else if (stuck) {
+        endReason = EndReason.noSpace;
+      }
+    } else if (stuck) {
+      endReason = EndReason.noSpace;
+    }
+    gameOver = endReason != EndReason.none;
+    // A game counts as finished the first time it ends, even if the player
+    // then revives or undoes.
+    if (gameOver && !_endReported) {
+      _endReported = true;
+      onGameEnd?.call();
+    }
+  }
+
   void _refillTray() {
     tray = List<Piece?>.of(_dealer.deal(grid, trayCount));
     dealCount++;
@@ -189,6 +346,7 @@ class GameController extends ChangeNotifier {
     final piece = tray[index];
     if (piece == null || !grid.canPlace(piece, row, col)) return false;
 
+    _undo = _Snapshot.of(this);
     grid.place(piece, row, col);
     var points = piece.size;
 
@@ -231,27 +389,14 @@ class GameController extends ChangeNotifier {
     tray[index] = null;
     if (tray.every((p) => p == null)) _refillTray();
 
-    final stuck = !tray.any((p) => p != null && grid.canFitAnywhere(p));
-    if (isLevel) {
-      movesLeft--;
-      if (goalsMet) {
-        endReason = EndReason.won;
-      } else if (movesLeft <= 0) {
-        endReason = EndReason.outOfMoves;
-      } else if (stuck) {
-        endReason = EndReason.noSpace;
-      }
-    } else if (stuck) {
-      endReason = EndReason.noSpace;
-    }
-    gameOver = endReason != EndReason.none;
+    if (isLevel) movesLeft--;
+    _evaluateEnd();
 
     if (score > best) {
       best = score;
       onNewBest?.call(best);
     }
     onMove?.call(lastMove!);
-    if (gameOver) onGameEnd?.call();
     onSave?.call();
     notifyListeners();
     return true;
@@ -302,5 +447,48 @@ class GameController extends ChangeNotifier {
     } catch (_) {
       return false;
     }
+  }
+}
+
+/// Everything a placement can change, for undo.
+class _Snapshot {
+  _Snapshot.of(GameController g)
+      : cells = [for (final row in g.grid.cells) List.of(row)],
+        ice = {...g.grid.ice},
+        tray = List.of(g.tray),
+        score = g.score,
+        combo = g.combo,
+        movesSinceClear = g.movesSinceClear,
+        lines = g.linesThisGame,
+        bestCombo = g.bestComboThisGame,
+        gems = {...g.gems},
+        gemsCollected = g.gemsCollected,
+        iceBroken = g.iceBroken,
+        movesLeft = g.movesLeft;
+
+  final List<List<int>> cells;
+  final Set<int> ice;
+  final List<Piece?> tray;
+  final int score, combo, movesSinceClear, lines, bestCombo;
+  final Set<int> gems;
+  final int gemsCollected, iceBroken, movesLeft;
+
+  void restoreInto(GameController g) {
+    for (var r = 0; r < Grid.size; r++) {
+      g.grid.cells[r].setAll(0, cells[r]);
+    }
+    g.grid.ice
+      ..clear()
+      ..addAll(ice);
+    g.tray = List.of(tray);
+    g.score = score;
+    g.combo = combo;
+    g.movesSinceClear = movesSinceClear;
+    g.linesThisGame = lines;
+    g.bestComboThisGame = bestCombo;
+    g.gems = {...gems};
+    g.gemsCollected = gemsCollected;
+    g.iceBroken = iceBroken;
+    g.movesLeft = movesLeft;
   }
 }

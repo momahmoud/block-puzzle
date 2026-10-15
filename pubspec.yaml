@@ -31,6 +31,16 @@ flutter:
     enable-swift-package-manager: false
   assets:
     - assets/sounds/
+  fonts:
+    # Fredoka, SIL Open Font License (assets/fonts/OFL.txt).
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/fredoka-500.ttf
+          weight: 500
+        - asset: assets/fonts/fredoka-600.ttf
+          weight: 600
+        - asset: assets/fonts/fredoka-700.ttf
+          weight: 700
 
 # App icon: dart run flutter_launcher_icons
 flutter_launcher_icons:
