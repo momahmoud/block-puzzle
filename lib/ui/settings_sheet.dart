@@ -41,10 +41,24 @@ Future<void> showSettingsSheet(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   OutlinedText(inGame ? 'Paused' : 'Settings', size: 30),
-                  const SizedBox(height: 12),
-                  if (!inGame)
+                  const SizedBox(height: 16),
+                  if (inGame) ...[
+                    SizedBox(
+                      width: 260,
+                      child: ChunkyButton(
+                        label: 'Resume',
+                        leading: const GameIcon('play', size: 30),
+                        expand: true,
+                        onPressed: () {
+                          sfx.tap();
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                  ] else ...[
                     Container(
-                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.2),
@@ -66,132 +80,162 @@ Future<void> showSettingsSheet(
                         ],
                       ),
                     ),
-                  if (inGame) ...[
-                    ChunkyButton(
-                      label: 'Resume',
-                      leading: const GameIcon('play', size: 30),
-                      onPressed: () {
-                        sfx.tap();
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const SizedBox(height: 12),
                   ],
-                  _SwitchRow(
-                    icon: Icons.volume_up_rounded,
-                    label: 'Sound',
-                    value: settings.sound,
-                    accent: theme.accent,
-                    onChanged: (v) => settings.sound = v,
-                  ),
-                  _SwitchRow(
-                    icon: Icons.music_note_rounded,
-                    label: 'Music',
-                    value: settings.music,
-                    accent: theme.accent,
-                    onChanged: (v) => settings.music = v,
-                  ),
-                  _SwitchRow(
-                    icon: Icons.vibration_rounded,
-                    label: 'Vibration',
-                    value: settings.haptics,
-                    accent: theme.accent,
-                    onChanged: (v) {
-                      settings.haptics = v;
-                      sfx.tap();
-                    },
-                  ),
-                  _Row(
-                    icon: Icons.palette_rounded,
-                    label: 'Theme',
-                    trailing: Text(
-                      GameTheme.byId(settings.themeId).name,
-                      style: const TextStyle(
-                          color: Colors.white70, fontWeight: FontWeight.w700),
-                    ),
-                    onTap: () =>
-                        showThemePicker(context, settings: settings, sfx: sfx),
-                  ),
-                  _Row(
-                    icon: Icons.help_outline_rounded,
-                    label: 'How to play',
-                    onTap: () => showHowToPlay(context),
-                  ),
-                  if (!purchases.adsRemoved)
-                    _Row(
-                      icon: Icons.block_rounded,
-                      label: 'Remove ads',
-                      trailing: Text(
-                        purchases.price ?? '',
-                        style: TextStyle(
-                            color: theme.accent, fontWeight: FontWeight.w900),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _Toggle(
+                        label: 'Sound',
+                        on: settings.sound,
+                        accent: theme.accent,
+                        icon: Icon(
+                          settings.sound
+                              ? Icons.volume_up_rounded
+                              : Icons.volume_off_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                        onTap: () {
+                          settings.sound = !settings.sound;
+                          sfx.tap();
+                        },
                       ),
-                      onTap: () => showRemoveAdsOffer(context, app),
-                    ),
-                  if (purchases.adsRemoved)
-                    const _Row(
-                      icon: Icons.verified_rounded,
-                      label: 'Ads removed. Thank you!',
-                      trailing: SizedBox.shrink(),
-                      onTap: null,
-                    ),
-                  _Row(
-                    icon: Icons.restore_rounded,
-                    label: 'Restore purchases',
-                    onTap: () async {
-                      await purchases.restore();
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-                        content: Text(purchases.error ??
-                            (purchases.adsRemoved
-                                ? 'Ads are removed.'
-                                : 'No purchases to restore.')),
-                      ));
-                    },
+                      _Toggle(
+                        label: 'Music',
+                        on: settings.music,
+                        accent: theme.accent,
+                        icon: const GameIcon('music', size: 36),
+                        onTap: () {
+                          settings.music = !settings.music;
+                          sfx.tap();
+                        },
+                      ),
+                      _Toggle(
+                        label: 'Vibration',
+                        on: settings.haptics,
+                        accent: theme.accent,
+                        icon: const Icon(Icons.vibration_rounded,
+                            color: Colors.white, size: 32),
+                        onTap: () {
+                          settings.haptics = !settings.haptics;
+                          sfx.tap();
+                        },
+                      ),
+                    ],
                   ),
-                  if (purchases.error != null)
+                  if (inGame) ...[
+                    const SizedBox(height: 24),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 4),
-                      child: Text(purchases.error!,
-                          style: const TextStyle(color: Color(0xFFFF8A8A))),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          if (onRestart != null)
+                            Expanded(
+                              child: ChunkyButton(
+                                label: 'Restart',
+                                leading: const GameIcon('replay', size: 26),
+                                fontSize: 18,
+                                expand: true,
+                                color:
+                                    Color.lerp(theme.sheet, Colors.white, 0.2),
+                                onPressed: () async {
+                                  if (await _confirmRestart(context) &&
+                                      context.mounted) {
+                                    Navigator.pop(context);
+                                    onRestart();
+                                  }
+                                },
+                              ),
+                            ),
+                          if (onRestart != null && onHome != null)
+                            const SizedBox(width: 12),
+                          if (onHome != null)
+                            Expanded(
+                              child: ChunkyButton(
+                                label: 'Home',
+                                leading: const GameIcon('home', size: 26),
+                                fontSize: 18,
+                                expand: true,
+                                color:
+                                    Color.lerp(theme.sheet, Colors.white, 0.2),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  onHome();
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  if (app.ads.privacyOptionsRequired)
+                    const SizedBox(height: 8),
+                  ] else ...[
+                    const SizedBox(height: 12),
                     _Row(
-                      icon: Icons.manage_accounts_rounded,
-                      label: 'Ad privacy choices',
-                      onTap: app.ads.showPrivacyOptions,
+                      icon: Icons.palette_rounded,
+                      label: 'Theme',
+                      trailing: Text(
+                        GameTheme.byId(settings.themeId).name,
+                        style: const TextStyle(
+                            color: Colors.white70, fontWeight: FontWeight.w700),
+                      ),
+                      onTap: () => showThemePicker(context,
+                          settings: settings, sfx: sfx),
                     ),
-                  _Row(
-                    icon: Icons.privacy_tip_outlined,
-                    label: 'Privacy policy',
-                    trailing: const Icon(Icons.open_in_new_rounded,
-                        color: Colors.white54, size: 20),
-                    onTap: () => launchUrl(
-                      Uri.parse(AppConfig.privacyPolicyUrl),
-                      mode: LaunchMode.externalApplication,
-                    ),
-                  ),
-                  if (onRestart != null)
                     _Row(
-                      icon: Icons.refresh_rounded,
-                      label: 'Restart game',
+                      icon: Icons.help_outline_rounded,
+                      label: 'How to play',
+                      onTap: () => showHowToPlay(context),
+                    ),
+                    if (!purchases.adsRemoved)
+                      _Row(
+                        icon: Icons.block_rounded,
+                        label: 'Remove ads',
+                        trailing: Text(
+                          purchases.price ?? '',
+                          style: TextStyle(
+                              color: theme.accent, fontWeight: FontWeight.w900),
+                        ),
+                        onTap: () => showRemoveAdsOffer(context, app),
+                      )
+                    else
+                      const _Row(
+                        icon: Icons.verified_rounded,
+                        label: 'Ads removed. Thank you!',
+                        trailing: SizedBox.shrink(),
+                        onTap: null,
+                      ),
+                    _Row(
+                      icon: Icons.restore_rounded,
+                      label: 'Restore purchases',
                       onTap: () async {
-                        if (await _confirmRestart(context) && context.mounted) {
-                          Navigator.pop(context);
-                          onRestart();
-                        }
+                        await purchases.restore();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.maybeOf(context)
+                            ?.showSnackBar(SnackBar(
+                          content: Text(purchases.error ??
+                              (purchases.adsRemoved
+                                  ? 'Ads are removed.'
+                                  : 'No purchases to restore.')),
+                        ));
                       },
                     ),
-                  if (onHome != null)
+                    if (app.ads.privacyOptionsRequired)
+                      _Row(
+                        icon: Icons.manage_accounts_rounded,
+                        label: 'Ad privacy choices',
+                        onTap: app.ads.showPrivacyOptions,
+                      ),
                     _Row(
-                      icon: Icons.home_rounded,
-                      label: 'Home',
-                      onTap: () {
-                        Navigator.pop(context);
-                        onHome();
-                      },
+                      icon: Icons.privacy_tip_outlined,
+                      label: 'Privacy policy',
+                      trailing: const Icon(Icons.open_in_new_rounded,
+                          color: Colors.white54, size: 20),
+                      onTap: () => launchUrl(
+                        Uri.parse(AppConfig.privacyPolicyUrl),
+                        mode: LaunchMode.externalApplication,
+                      ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -246,32 +290,68 @@ class _Row extends StatelessWidget {
   }
 }
 
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({
-    required this.icon,
+/// A round on/off button with a label, for sound, music and vibration.
+class _Toggle extends StatelessWidget {
+  const _Toggle({
     required this.label,
-    required this.value,
+    required this.on,
+    required this.icon,
     required this.accent,
-    required this.onChanged,
+    required this.onTap,
   });
 
-  final IconData icon;
   final String label;
-  final bool value;
+  final bool on;
+  final Widget icon;
   final Color accent;
-  final ValueChanged<bool> onChanged;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
-      secondary: _rowIcon(icon),
-      title: Text(label,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w800)),
-      value: value,
-      activeThumbColor: Colors.white,
-      activeTrackColor: accent,
-      onChanged: onChanged,
+    return Semantics(
+      toggled: on,
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: on
+                    ? accent.withValues(alpha: 0.35)
+                    : Colors.black.withValues(alpha: 0.25),
+                border:
+                    Border.all(color: on ? accent : Colors.white24, width: 2.5),
+              ),
+              child: Center(child: Opacity(opacity: on ? 1 : 0.4, child: icon)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: on ? Colors.white : Colors.white54,
+              ),
+            ),
+            Text(
+              on ? 'On' : 'Off',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: on ? accent : Colors.white38),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
